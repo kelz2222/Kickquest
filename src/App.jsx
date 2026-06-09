@@ -706,6 +706,7 @@ export default function App() {
   }, [newsLoading]);
 
   useEffect(function(){if(tab==="news") loadNews();}, [tab]);
+useEffect(function(){ loadNews(); }, []);
 
   const filteredMatches = filter==="ALL" ? WC_FIXTURES : WC_FIXTURES.filter(function(m){return m.group===filter;});
   const predCount = Object.keys(preds).length;
