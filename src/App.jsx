@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -122,6 +123,7 @@ function getCountdown() {
   };
 }
 
+// Fallback time-based status, used when no live-score data is available for a match
 function getStatus(dateIso) {
   const now = Date.now();
   const start = new Date(dateIso).getTime();
@@ -193,6 +195,128 @@ async function fetchTeamNews(team) {
   } catch (e) { return []; }
 }
 
+// ---------------------------------------------------------------------------
+// LIVE SCORES (date-based — works on the API-Football free plan)
+// The free plan blocks fixtures?league=1&season=2026, but fixtures?date=YYYY-MM-DD
+// works and includes World Cup matches (league.id === 1). To stay within the
+// 100 req/day free quota, we only query "today" on each poll, plus a one-time
+// check of yesterday/tomorrow at startup to catch matches near the UTC day
+// boundary (since match times in WC_FIXTURES are in UTC but the API groups by
+// local match date).
+// ---------------------------------------------------------------------------
+const TEAM_ALIASES = {
+  "South Korea": ["South Korea", "Korea Republic"],
+  "Czechia": ["Czechia", "Czech Republic"],
+  "Ivory Coast": ["Ivory Coast", "Côte d'Ivoire", "Cote d'Ivoire"],
+  "Curacao": ["Curacao", "Curaçao"],
+  "USA": ["USA", "United States"],
+  "Bosnia & Herz.": ["Bosnia & Herz.", "Bosnia and Herzegovina", "Bosnia-Herzegovina"],
+  "Turkiye": ["Turkiye", "Türkiye", "Turkey"],
+  "DR Congo": ["DR Congo", "Congo DR"],
+};
+
+function teamNameMatches(fixtureName, apiName) {
+  if (!apiName) return false;
+  const aliases = TEAM_ALIASES[fixtureName] || [fixtureName];
+  const norm = apiName.toLowerCase().trim();
+  return aliases.some(function(a) {
+    const al = a.toLowerCase().trim();
+    return al === norm || norm.includes(al) || al.includes(norm);
+  });
+}
+
+// Maps API-Football fixture status codes to our 3 statuses
+function mapApiStatus(short) {
+  if (["FT", "AET", "PEN"].includes(short)) return "finished";
+  if (["1H", "HT", "2H", "ET", "BT", "P", "LIVE", "INT"].includes(short)) return "live";
+  return "upcoming";
+}
+
+function todayISO(offsetDays) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + (offsetDays || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+// Fetches World Cup fixtures for one date and merges matches into `map`.
+async function fetchScoresForDate(date, key, map) {
+  try {
+    const r = await fetch("https://v3.football.api-sports.io/fixtures?date=" + date, {
+      headers: { "x-apisports-key": key },
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    (d.response || []).forEach(function(f) {
+      if (!f.league || f.league.id !== 1) return; // World Cup only
+      const homeName = f.teams && f.teams.home && f.teams.home.name;
+      const awayName = f.teams && f.teams.away && f.teams.away.name;
+      const status = f.fixture && f.fixture.status && f.fixture.status.short;
+      const goals = f.goals || {};
+      WC_FIXTURES.forEach(function(fix) {
+        if (teamNameMatches(fix.home, homeName) && teamNameMatches(fix.away, awayName)) {
+          map[fix.id] = {
+            home: typeof goals.home === "number" ? goals.home : null,
+            away: typeof goals.away === "number" ? goals.away : null,
+            status: mapApiStatus(status),
+          };
+        }
+      });
+    });
+  } catch (e) { /* ignore, leave map as-is */ }
+}
+
+// Returns { [fixtureId]: { home, away, status } } or null if no API key set.
+let _checkedEdgeDates = false;
+async function fetchLiveScores() {
+  const key = import.meta.env.VITE_APIFOOTBALL_KEY || "";
+  if (!key) return null;
+  const map = {};
+  await fetchScoresForDate(todayISO(0), key, map);
+  if (!_checkedEdgeDates) {
+    _checkedEdgeDates = true;
+    await fetchScoresForDate(todayISO(-1), key, map);
+    await fetchScoresForDate(todayISO(1), key, map);
+  }
+  return map;
+}
+
+// Works out the status of a match, preferring live API data over the fixed
+// kickoff-time fallback.
+function getMatchStatus(match, scores) {
+  const sc = scores && scores[match.id];
+  if (sc && sc.status) return sc.status;
+  return getStatus(match.date);
+}
+
+// Given final scores + predictions, works out newly-finished matches that
+// haven't been scored yet, and how many points they're worth.
+function computePredictionAwards(scoreMap, preds, alreadyScored) {
+  const awards = []; // [{id, pts, type}]
+  const newlyScored = [];
+  Object.keys(scoreMap || {}).forEach(function(idStr) {
+    const id = parseInt(idStr, 10);
+    const sc = scoreMap[id];
+    if (sc.status !== "finished") return;
+    if (alreadyScored.indexOf(id) !== -1) return;
+    if (sc.home === null || sc.away === null) return;
+    newlyScored.push(id);
+    const pred = preds[id];
+    if (!pred) return;
+    const ph = parseInt(pred.home, 10);
+    const pa = parseInt(pred.away, 10);
+    if (ph === sc.home && pa === sc.away) {
+      awards.push({ id, pts: 100, type: "exact" });
+    } else {
+      const predOutcome = ph > pa ? "home" : ph < pa ? "away" : "draw";
+      const actualOutcome = sc.home > sc.away ? "home" : sc.home < sc.away ? "away" : "draw";
+      if (predOutcome === actualOutcome) {
+        awards.push({ id, pts: 50, type: "winner" });
+      }
+    }
+  });
+  return { awards, newlyScored };
+}
+
 function Dot() {
   return <span style={{ display:"inline-block", width:7, height:7, borderRadius:"50%", background:T.red, boxShadow:"0 0 6px "+T.red, animation:"pulse 1.1s infinite", marginRight:5 }} />;
 }
@@ -233,11 +357,24 @@ function Countdown() {
   );
 }
 
-function MatchCard({ match, pred, onPredict }) {
-  const status = getStatus(match.date);
+function MatchCard({ match, pred, score, onPredict }) {
+  const status = getMatchStatus(match, score ? { [match.id]: score } : null);
   const live = status === "live";
   const done = status === "finished";
   const upcoming = status === "upcoming";
+  const hasScore = score && typeof score.home === "number" && typeof score.away === "number";
+
+  let predOutcome = null;
+  if (done && hasScore && pred) {
+    const ph = parseInt(pred.home,10), pa = parseInt(pred.away,10);
+    if (ph === score.home && pa === score.away) predOutcome = { type:"exact", pts:100 };
+    else {
+      const predW = ph>pa?"home":ph<pa?"away":"draw";
+      const actW = score.home>score.away?"home":score.home<score.away?"away":"draw";
+      predOutcome = predW===actW ? { type:"winner", pts:50 } : { type:"miss", pts:0 };
+    }
+  }
+
   return (
     <div style={{ background:live?"linear-gradient(135deg,#1a1500,#0f2010)":T.card, border:"1px solid "+(live?T.gold+"55":T.border), borderRadius:14, padding:"14px 15px", marginBottom:10, position:"relative", overflow:"hidden", boxShadow:live?"0 0 20px "+T.gold+"15":"none" }}>
       {live && <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,"+T.gold+",transparent)", animation:"shimmer 2s infinite" }} />}
@@ -253,7 +390,13 @@ function MatchCard({ match, pred, onPredict }) {
       </div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
         <div style={{ flex:1 }}><div style={{ fontSize:16, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color:T.white }}>{match.home}</div></div>
-        <div style={{ minWidth:50, textAlign:"center" }}><span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:T.muted }}>VS</span></div>
+        <div style={{ minWidth:54, textAlign:"center" }}>
+          {hasScore ? (
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:live?T.gold:T.white, letterSpacing:2 }}>{score.home} - {score.away}</span>
+          ) : (
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:T.muted }}>VS</span>
+          )}
+        </div>
         <div style={{ flex:1, textAlign:"right" }}><div style={{ fontSize:16, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color:T.white }}>{match.away}</div></div>
       </div>
       {upcoming && !pred && (
@@ -270,6 +413,16 @@ function MatchCard({ match, pred, onPredict }) {
             {match.home} {pred.home} - {pred.away} {match.away}
           </div>
           {!done && <div style={{ fontSize:9, color:T.muted, marginTop:4 }}>Predictions are final — no editing allowed</div>}
+          {done && predOutcome && (
+            <div style={{ fontSize:11, marginTop:6, color: predOutcome.type==="miss" ? T.muted : T.lime, fontWeight:700 }}>
+              {predOutcome.type==="exact" && "🎯 Exact score! +100 pts"}
+              {predOutcome.type==="winner" && "🏆 Correct result! +50 pts"}
+              {predOutcome.type==="miss" && "❌ Incorrect prediction"}
+            </div>
+          )}
+          {done && !hasScore && (
+            <div style={{ fontSize:10, color:T.muted, marginTop:4 }}>Result pending — points awarded once confirmed</div>
+          )}
         </div>
       )}
       {live && !pred && (
@@ -552,6 +705,31 @@ function SetupProfile({ firebaseUser, onComplete }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// PROFILE STORAGE (cross-device fix)
+// The user's profile {username, avatar, favTeam} is stored as JSON in the
+// Firebase Auth `displayName` field, so it's tied to the account, not the
+// device. localStorage is still used as a fast local cache.
+// ---------------------------------------------------------------------------
+function readProfileFromUser(fbUser) {
+  if (fbUser.displayName) {
+    try {
+      const p = JSON.parse(fbUser.displayName);
+      if (p && p.username) return p;
+    } catch (e) { /* not JSON, ignore */ }
+  }
+  return null;
+}
+
+async function saveProfileToAccount(fbUser, profile) {
+  // Cache locally for instant loads on this device
+  localStorage.setItem(uKey(fbUser.uid, "profile"), JSON.stringify(profile));
+  // Persist to the account itself so it follows the user across devices
+  try {
+    await updateProfile(fbUser, { displayName: JSON.stringify(profile) });
+  } catch (e) { /* non-fatal — local cache still works on this device */ }
+}
+
 export default function App() {
   const [screen, setScreen] = useState("loading");
   const [firebaseUser, setFirebaseUser] = useState(null);
@@ -563,6 +741,7 @@ export default function App() {
   const [newsError, setNewsError] = useState(false);
   const [preds, setPreds] = useState({});
   const [pts, setPts] = useState(0);
+  const [scores, setScores] = useState({});
   const [banter, setBanter] = useState([
     {username:"FootballGod_GH",avatar:"🇬🇭",time:"2m",msg:"Ghana vs Croatia and Panama. Black Stars going through no debate!",likes:93},
     {username:"MoroccoMagic",avatar:"🌟",time:"8m",msg:"Morocco vs Brazil Group C. Atlas Lions will cause another upset!",likes:61},
@@ -584,33 +763,56 @@ export default function App() {
     setTimeout(function(){setToast(null);}, 3000);
   }
 
+  // Loads everything that depends on a logged-in user with a profile,
+  // and resolves the profile from displayName (account) first, falling
+  // back to / migrating the local cache for older accounts.
+  async function loadUserSession(fbUser) {
+    let p = readProfileFromUser(fbUser);
+    if (!p) {
+      const local = localStorage.getItem(uKey(fbUser.uid, "profile"));
+      if (local) {
+        p = JSON.parse(local);
+        // Migrate this device's local profile up to the account
+        saveProfileToAccount(fbUser, p);
+      }
+    } else {
+      // Keep local cache in sync
+      localStorage.setItem(uKey(fbUser.uid, "profile"), JSON.stringify(p));
+    }
+
+    if (!p) {
+      setScreen("setup");
+      return;
+    }
+
+    const fullUser = Object.assign({id:fbUser.uid, email:fbUser.email}, p);
+    setUser(fullUser);
+
+    const sp = localStorage.getItem(uKey(fbUser.uid,"pts"));
+    const sr = localStorage.getItem(uKey(fbUser.uid,"preds"));
+    const loadedPts = sp ? parseInt(sp) : 0;
+    const loadedPreds = sr ? JSON.parse(sr) : {};
+    setPts(loadedPts);
+    setPreds(loadedPreds);
+
+    const board = localStorage.getItem("kq_leaderboard");
+    if (board) setLeaderboard(JSON.parse(board));
+    updateLeaderboard(fullUser, loadedPts, loadedPreds);
+
+    checkDailyBonus(fbUser.uid, loadedPts, function(newPts) {
+      setPts(newPts);
+      updateLeaderboard(fullUser, newPts, loadedPreds);
+      showToast("🎁 Daily login bonus! +10pts", T.gold);
+    });
+
+    setScreen("app");
+  }
+
   useEffect(function() {
     const unsub = onAuthStateChanged(auth, function(fbUser) {
       if (fbUser) {
         setFirebaseUser(fbUser);
-        const profile = localStorage.getItem(uKey(fbUser.uid,"profile"));
-        if (profile) {
-          const p = JSON.parse(profile);
-          const fullUser = Object.assign({id:fbUser.uid, email:fbUser.email}, p);
-          setUser(fullUser);
-          const sp = localStorage.getItem(uKey(fbUser.uid,"pts"));
-          const sr = localStorage.getItem(uKey(fbUser.uid,"preds"));
-          const loadedPts = sp ? parseInt(sp) : 0;
-          const loadedPreds = sr ? JSON.parse(sr) : {};
-          setPts(loadedPts);
-          setPreds(loadedPreds);
-          const board = localStorage.getItem("kq_leaderboard");
-          if (board) setLeaderboard(JSON.parse(board));
-          updateLeaderboard(fullUser, loadedPts, loadedPreds);
-          checkDailyBonus(fbUser.uid, loadedPts, function(newPts) {
-            setPts(newPts);
-            updateLeaderboard(fullUser, newPts, loadedPreds);
-            showToast("🎁 Daily login bonus! +10pts", T.gold);
-          });
-          setScreen("app");
-        } else {
-          setScreen("setup");
-        }
+        loadUserSession(fbUser);
       } else {
         setFirebaseUser(null);
         setUser(null);
@@ -622,40 +824,28 @@ export default function App() {
 
   function handleAuthSuccess(fbUser, isNew) {
     setFirebaseUser(fbUser);
-    const profile = localStorage.getItem(uKey(fbUser.uid,"profile"));
-    if (profile && !isNew) {
-      const p = JSON.parse(profile);
-      const fullUser = Object.assign({id:fbUser.uid, email:fbUser.email}, p);
-      setUser(fullUser);
-      const sp = localStorage.getItem(uKey(fbUser.uid,"pts"));
-      const sr = localStorage.getItem(uKey(fbUser.uid,"preds"));
-      const loadedPts = sp ? parseInt(sp) : 0;
-      const loadedPreds = sr ? JSON.parse(sr) : {};
-      setPts(loadedPts);
-      setPreds(loadedPreds);
-      const board = localStorage.getItem("kq_leaderboard");
-      if (board) setLeaderboard(JSON.parse(board));
-      updateLeaderboard(fullUser, loadedPts, loadedPreds);
-      checkDailyBonus(fbUser.uid, loadedPts, function(newPts) {
-        setPts(newPts);
-        updateLeaderboard(fullUser, newPts, loadedPreds);
-        showToast("🎁 Daily login bonus! +10pts", T.gold);
-      });
-      setScreen("app");
+    if (isNew) {
+      setScreen("setup");
+      return;
+    }
+    const p = readProfileFromUser(fbUser) || JSON.parse(localStorage.getItem(uKey(fbUser.uid,"profile")) || "null");
+    if (p) {
+      loadUserSession(fbUser);
       showToast("Welcome back, @"+p.username+"!", T.gold);
     } else {
       setScreen("setup");
     }
   }
 
-  function handleSetupComplete(profile) {
+  async function handleSetupComplete(profile) {
     if (!firebaseUser) return;
-    localStorage.setItem(uKey(firebaseUser.uid,"profile"), JSON.stringify(profile));
+    await saveProfileToAccount(firebaseUser, profile);
     const fullUser = Object.assign({id:firebaseUser.uid, email:firebaseUser.email}, profile);
     setUser(fullUser);
     localStorage.setItem(uKey(firebaseUser.uid,"pts"), "10");
     localStorage.setItem(uKey(firebaseUser.uid,"lastlogin"), new Date().toDateString());
     setPts(10);
+    setPreds({});
     updateLeaderboard(fullUser, 10, {});
     setScreen("app");
     showToast("Welcome to KickQuest, @"+profile.username+"! +10pts signup bonus!", T.gold);
@@ -706,12 +896,60 @@ export default function App() {
   }, [newsLoading]);
 
   useEffect(function(){if(tab==="news") loadNews();}, [tab]);
-useEffect(function(){ loadNews(); }, []);
+  useEffect(function(){ loadNews(); }, []);
+
+  // ---- Live scores: load on mount and poll while the app is open ----------
+  const loadScores = useCallback(function() {
+    fetchLiveScores().then(function(map) {
+      if (!map) return;
+      setScores(map);
+    });
+  }, []);
+
+  useEffect(function() {
+    loadScores();
+    // Poll more often on days when a World Cup match is scheduled, since
+    // that's when the score data actually changes. Otherwise poll rarely
+    // to conserve the free 100 req/day API quota.
+    const hasMatchToday = WC_FIXTURES.some(function(m) {
+      return new Date(m.date).toDateString() === new Date().toDateString();
+    });
+    const interval = hasMatchToday ? 5 * 60000 : 30 * 60000;
+    const t = setInterval(loadScores, interval);
+    return function() { clearInterval(t); };
+  }, [loadScores]);
+
+  // ---- Award prediction points once a match's final score arrives ---------
+  useEffect(function() {
+    if (!user) return;
+    if (!scores || Object.keys(scores).length === 0) return;
+
+    const scoredKey = uKey(user.id, "scored");
+    const stored = localStorage.getItem(scoredKey);
+    const alreadyScored = stored ? JSON.parse(stored) : [];
+
+    const { awards, newlyScored } = computePredictionAwards(scores, preds, alreadyScored);
+    if (newlyScored.length === 0) return;
+
+    localStorage.setItem(scoredKey, JSON.stringify(alreadyScored.concat(newlyScored)));
+
+    if (awards.length > 0) {
+      let totalAwarded = 0;
+      awards.forEach(function(a){ totalAwarded += a.pts; });
+      addPoints(totalAwarded);
+      const exactCount = awards.filter(function(a){return a.type==="exact";}).length;
+      const winnerCount = awards.filter(function(a){return a.type==="winner";}).length;
+      let msg = "🎉 Results in! +"+totalAwarded+" pts";
+      if (exactCount) msg += " (🎯 "+exactCount+" exact)";
+      if (winnerCount) msg += " (🏆 "+winnerCount+" correct result)";
+      showToast(msg, T.gold);
+    }
+  }, [scores, user]);
 
   const filteredMatches = filter==="ALL" ? WC_FIXTURES : WC_FIXTURES.filter(function(m){return m.group===filter;});
   const predCount = Object.keys(preds).length;
   const myRank = user ? leaderboard.findIndex(function(x){return x.id===user.id;})+1 : 0;
-  const liveCount = WC_FIXTURES.filter(function(m){return getStatus(m.date)==="live";}).length;
+  const liveCount = WC_FIXTURES.filter(function(m){return getMatchStatus(m, scores)==="live";}).length;
 
   if (screen==="loading") return <LoadingScreen />;
   if (screen==="login") return <AuthScreen onSuccess={handleAuthSuccess} />;
@@ -831,7 +1069,7 @@ useEffect(function(){ loadNews(); }, []);
             </div>
             <div style={{ fontSize:9, color:T.muted, letterSpacing:2, marginBottom:10 }}>{filteredMatches.length} MATCHES · {predCount} LOCKED IN</div>
             {filteredMatches.map(function(m){
-              return <MatchCard key={m.id} match={m} pred={preds[m.id]} onPredict={setPredictModal} />;
+              return <MatchCard key={m.id} match={m} pred={preds[m.id]} score={scores[m.id]} onPredict={setPredictModal} />;
             })}
           </div>
         )}
