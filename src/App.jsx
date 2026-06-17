@@ -109,7 +109,7 @@ const WC_FIXTURES = [
   {id:69,home:"England",away:"Ghana",date:"2026-06-24T19:00:00Z",group:"L",venue:"Atlanta"},
   {id:70,home:"Croatia",away:"Panama",date:"2026-06-24T22:00:00Z",group:"L",venue:"Los Angeles"},
   {id:71,home:"England",away:"Croatia",date:"2026-06-27T23:00:00Z",group:"L",venue:"Boston"},
-  {id:72,home:"Ghana",away:"Panama",date:"2026-06-27T23:00:00Z",group:"L",venue:"New York"},
+  {id:72,home:"Ghana",away:"Panama",date:"2026-06-17T23:00:00Z",group:"L",venue:"New York"},
 ];
 
 function getCountdown() {
@@ -123,7 +123,6 @@ function getCountdown() {
   };
 }
 
-// Fallback time-based status, used when no live-score data is available for a match
 function getStatus(dateIso) {
   const now = Date.now();
   const start = new Date(dateIso).getTime();
@@ -196,13 +195,14 @@ async function fetchTeamNews(team) {
 }
 
 // ---------------------------------------------------------------------------
+// BONUS CHALLENGE MATCHES
+// ---------------------------------------------------------------------------
+const BONUS_MATCHES = {
+  72: { label: "🇬🇭 GHANA BONUS CHALLENGE!", exactPts: 200, winnerPts: 100 },
+};
+
+// ---------------------------------------------------------------------------
 // LIVE SCORES (date-based — works on the API-Football free plan)
-// The free plan blocks fixtures?league=1&season=2026, but fixtures?date=YYYY-MM-DD
-// works and includes World Cup matches (league.id === 1). To stay within the
-// 100 req/day free quota, we only query "today" on each poll, plus a one-time
-// check of yesterday/tomorrow at startup to catch matches near the UTC day
-// boundary (since match times in WC_FIXTURES are in UTC but the API groups by
-// local match date).
 // ---------------------------------------------------------------------------
 const TEAM_ALIASES = {
   "South Korea": ["South Korea", "Korea Republic"],
@@ -225,7 +225,6 @@ function teamNameMatches(fixtureName, apiName) {
   });
 }
 
-// Maps API-Football fixture status codes to our 3 statuses
 function mapApiStatus(short) {
   if (["FT", "AET", "PEN"].includes(short)) return "finished";
   if (["1H", "HT", "2H", "ET", "BT", "P", "LIVE", "INT"].includes(short)) return "live";
@@ -238,7 +237,6 @@ function todayISO(offsetDays) {
   return d.toISOString().slice(0, 10);
 }
 
-// Fetches World Cup fixtures for one date and merges matches into `map`.
 async function fetchScoresForDate(date, key, map) {
   try {
     const r = await fetch("https://v3.football.api-sports.io/fixtures?date=" + date, {
@@ -247,7 +245,7 @@ async function fetchScoresForDate(date, key, map) {
     if (!r.ok) return;
     const d = await r.json();
     (d.response || []).forEach(function(f) {
-      if (!f.league || f.league.id !== 1) return; // World Cup only
+      if (!f.league || f.league.id !== 1) return;
       const homeName = f.teams && f.teams.home && f.teams.home.name;
       const awayName = f.teams && f.teams.away && f.teams.away.name;
       const status = f.fixture && f.fixture.status && f.fixture.status.short;
@@ -262,10 +260,9 @@ async function fetchScoresForDate(date, key, map) {
         }
       });
     });
-  } catch (e) { /* ignore, leave map as-is */ }
+  } catch (e) {}
 }
 
-// Returns { [fixtureId]: { home, away, status } } or null if no API key set.
 let _checkedEdgeDates = false;
 async function fetchLiveScores() {
   const key = import.meta.env.VITE_APIFOOTBALL_KEY || "";
@@ -280,18 +277,14 @@ async function fetchLiveScores() {
   return map;
 }
 
-// Works out the status of a match, preferring live API data over the fixed
-// kickoff-time fallback.
 function getMatchStatus(match, scores) {
   const sc = scores && scores[match.id];
   if (sc && sc.status) return sc.status;
   return getStatus(match.date);
 }
 
-// Given final scores + predictions, works out newly-finished matches that
-// haven't been scored yet, and how many points they're worth.
 function computePredictionAwards(scoreMap, preds, alreadyScored) {
-  const awards = []; // [{id, pts, type}]
+  const awards = [];
   const newlyScored = [];
   Object.keys(scoreMap || {}).forEach(function(idStr) {
     const id = parseInt(idStr, 10);
@@ -304,13 +297,14 @@ function computePredictionAwards(scoreMap, preds, alreadyScored) {
     if (!pred) return;
     const ph = parseInt(pred.home, 10);
     const pa = parseInt(pred.away, 10);
+    const bonus = BONUS_MATCHES[id];
     if (ph === sc.home && pa === sc.away) {
-      awards.push({ id, pts: 100, type: "exact" });
+      awards.push({ id, pts: bonus ? bonus.exactPts : 100, type: "exact", bonus: !!bonus });
     } else {
       const predOutcome = ph > pa ? "home" : ph < pa ? "away" : "draw";
       const actualOutcome = sc.home > sc.away ? "home" : sc.home < sc.away ? "away" : "draw";
       if (predOutcome === actualOutcome) {
-        awards.push({ id, pts: 50, type: "winner" });
+        awards.push({ id, pts: bonus ? bonus.winnerPts : 50, type: "winner", bonus: !!bonus });
       }
     }
   });
@@ -363,21 +357,28 @@ function MatchCard({ match, pred, score, onPredict }) {
   const done = status === "finished";
   const upcoming = status === "upcoming";
   const hasScore = score && typeof score.home === "number" && typeof score.away === "number";
+  const bonus = BONUS_MATCHES[match.id];
 
   let predOutcome = null;
   if (done && hasScore && pred) {
     const ph = parseInt(pred.home,10), pa = parseInt(pred.away,10);
-    if (ph === score.home && pa === score.away) predOutcome = { type:"exact", pts:100 };
+    if (ph === score.home && pa === score.away) predOutcome = { type:"exact" };
     else {
       const predW = ph>pa?"home":ph<pa?"away":"draw";
       const actW = score.home>score.away?"home":score.home<score.away?"away":"draw";
-      predOutcome = predW===actW ? { type:"winner", pts:50 } : { type:"miss", pts:0 };
+      predOutcome = predW===actW ? { type:"winner" } : { type:"miss" };
     }
   }
 
   return (
-    <div style={{ background:live?"linear-gradient(135deg,#1a1500,#0f2010)":T.card, border:"1px solid "+(live?T.gold+"55":T.border), borderRadius:14, padding:"14px 15px", marginBottom:10, position:"relative", overflow:"hidden", boxShadow:live?"0 0 20px "+T.gold+"15":"none" }}>
+    <div style={{ background:live?"linear-gradient(135deg,#1a1500,#0f2010)":T.card, border:"1px solid "+(live?T.gold+"55":bonus?"rgba(255,215,0,0.6)":T.border), borderRadius:14, padding:"14px 15px", marginBottom:10, position:"relative", overflow:"hidden", boxShadow:live?"0 0 20px "+T.gold+"15":bonus?"0 0 16px rgba(255,215,0,0.15)":"none" }}>
       {live && <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,"+T.gold+",transparent)", animation:"shimmer 2s infinite" }} />}
+      {bonus && (
+        <div style={{ background:"linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.1))", border:"1px solid rgba(255,215,0,0.4)", borderRadius:8, padding:"7px 12px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <span style={{ fontSize:11, color:T.gold, fontWeight:700 }}>{bonus.label}</span>
+          <span style={{ fontSize:10, color:T.lime, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>EXACT: {bonus.exactPts}pts · RESULT: {bonus.winnerPts}pts</span>
+        </div>
+      )}
       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <span style={{ fontSize:9, color:T.gold, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, background:"rgba(245,197,24,0.12)", padding:"2px 7px", borderRadius:5 }}>GROUP {match.group}</span>
@@ -415,8 +416,8 @@ function MatchCard({ match, pred, score, onPredict }) {
           {!done && <div style={{ fontSize:9, color:T.muted, marginTop:4 }}>Predictions are final — no editing allowed</div>}
           {done && predOutcome && (
             <div style={{ fontSize:11, marginTop:6, color: predOutcome.type==="miss" ? T.muted : T.lime, fontWeight:700 }}>
-              {predOutcome.type==="exact" && "🎯 Exact score! +100 pts"}
-              {predOutcome.type==="winner" && "🏆 Correct result! +50 pts"}
+              {predOutcome.type==="exact" && ("🎯 Exact score! +"+(bonus?bonus.exactPts:100)+" pts"+(bonus?" 🔥 BONUS!":""))}
+              {predOutcome.type==="winner" && ("🏆 Correct result! +"+(bonus?bonus.winnerPts:50)+" pts"+(bonus?" 🔥 BONUS!":""))}
               {predOutcome.type==="miss" && "❌ Incorrect prediction"}
             </div>
           )}
@@ -443,12 +444,19 @@ function PredictModal({ match, onClose, onSubmit }) {
   const [h, setH] = useState("");
   const [a, setA] = useState("");
   const ok = h !== "" && a !== "";
+  const bonus = BONUS_MATCHES[match.id];
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.88)", backdropFilter:"blur(4px)", display:"flex", alignItems:"flex-end", zIndex:1000 }}>
       <div onClick={function(e){e.stopPropagation();}} style={{ width:"100%", maxWidth:430, margin:"0 auto", background:T.surface, border:"1px solid "+T.border, borderRadius:"22px 22px 0 0", padding:"20px 20px 40px", animation:"slideUp 0.3s ease-out" }}>
         <div style={{ width:36, height:4, background:T.faint, borderRadius:2, margin:"0 auto 20px" }} />
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:T.gold, letterSpacing:2, marginBottom:4 }}>PREDICT SCORE</div>
-        <div style={{ fontSize:11, color:T.muted, marginBottom:4 }}>Group {match.group} · {fmtDate(match.date)}</div>
+        <div style={{ fontSize:11, color:T.muted, marginBottom:8 }}>Group {match.group} · {fmtDate(match.date)}</div>
+        {bonus && (
+          <div style={{ background:"linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.1))", border:"1px solid rgba(255,215,0,0.5)", borderRadius:8, padding:"8px 12px", marginBottom:10, textAlign:"center" }}>
+            <div style={{ fontSize:12, color:T.gold, fontWeight:700 }}>{bonus.label}</div>
+            <div style={{ fontSize:10, color:T.lime, marginTop:2 }}>Exact score = {bonus.exactPts} pts · Correct result = {bonus.winnerPts} pts</div>
+          </div>
+        )}
         <div style={{ background:"rgba(255,53,53,0.08)", border:"1px solid rgba(255,53,53,0.2)", borderRadius:8, padding:"8px 12px", marginBottom:16 }}>
           <span style={{ fontSize:11, color:T.red }}>⚠️ Once locked, predictions cannot be changed</span>
         </div>
@@ -564,11 +572,9 @@ function AuthScreen({ onSuccess }) {
   return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"'Outfit',sans-serif" }}>
       <style>{"@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;600;700&display=swap'); @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}} *{box-sizing:border-box}"}</style>
-
       <img src={LOGO} alt="KickQuest" style={{ width:100, height:100, objectFit:"contain", marginBottom:12, animation:"float 3s ease-in-out infinite" }} />
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36, letterSpacing:4, background:"linear-gradient(135deg,"+T.gold+",#c49a10)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:4, textAlign:"center" }}>KICKQUEST</div>
       <div style={{ fontSize:10, color:T.muted, letterSpacing:2, marginBottom:28, textAlign:"center" }}>PREDICT · PLAY · WIN THE WORLD CUP</div>
-
       <div style={{ width:"100%", maxWidth:340 }}>
         <div style={{ display:"flex", background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:4, marginBottom:20 }}>
           {[{id:"signin",label:"SIGN IN"},{id:"signup",label:"CREATE ACCOUNT"}].map(function(m) {
@@ -580,7 +586,6 @@ function AuthScreen({ onSuccess }) {
             );
           })}
         </div>
-
         <button onClick={handleGoogle} disabled={loading}
           style={{ width:"100%", padding:"13px", borderRadius:12, border:"1px solid "+T.border, background:T.card, color:T.white, fontSize:14, fontFamily:"'Outfit',sans-serif", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, marginBottom:16, fontWeight:600, opacity:loading?0.7:1 }}>
           <svg width="18" height="18" viewBox="0 0 48 48">
@@ -591,42 +596,28 @@ function AuthScreen({ onSuccess }) {
           </svg>
           {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
         </button>
-
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
           <div style={{ flex:1, height:1, background:T.border }} />
           <span style={{ fontSize:10, color:T.muted }}>OR WITH EMAIL</span>
           <div style={{ flex:1, height:1, background:T.border }} />
         </div>
-
-        <input value={email} onChange={function(e){setEmail(e.target.value);setError("");}}
-          placeholder="Email address" type="email"
+        <input value={email} onChange={function(e){setEmail(e.target.value);setError("");}} placeholder="Email address" type="email"
           style={{ width:"100%", padding:"13px 14px", borderRadius:12, border:"1px solid "+T.border, background:T.card, color:T.white, fontSize:14, fontFamily:"'Outfit',sans-serif", outline:"none", marginBottom:10 }} />
-
-        <input value={password} onChange={function(e){setPassword(e.target.value);setError("");}}
-          placeholder="Password (min 6 characters)" type="password"
+        <input value={password} onChange={function(e){setPassword(e.target.value);setError("");}} placeholder="Password (min 6 characters)" type="password"
           style={{ width:"100%", padding:"13px 14px", borderRadius:12, border:"1px solid "+T.border, background:T.card, color:T.white, fontSize:14, fontFamily:"'Outfit',sans-serif", outline:"none", marginBottom:mode==="signup"?10:16 }} />
-
         {mode === "signup" && (
-          <input value={confirm} onChange={function(e){setConfirm(e.target.value);setError("");}}
-            placeholder="Confirm password" type="password"
+          <input value={confirm} onChange={function(e){setConfirm(e.target.value);setError("");}} placeholder="Confirm password" type="password"
             style={{ width:"100%", padding:"13px 14px", borderRadius:12, border:"1px solid "+T.border, background:T.card, color:T.white, fontSize:14, fontFamily:"'Outfit',sans-serif", outline:"none", marginBottom:16 }} />
         )}
-
         {error !== "" && (
-          <div style={{ fontSize:11, color:T.red, marginBottom:12, textAlign:"center", padding:"9px 14px", background:"rgba(255,53,53,0.1)", borderRadius:8, border:"1px solid rgba(255,53,53,0.2)" }}>
-            {error}
-          </div>
+          <div style={{ fontSize:11, color:T.red, marginBottom:12, textAlign:"center", padding:"9px 14px", background:"rgba(255,53,53,0.1)", borderRadius:8, border:"1px solid rgba(255,53,53,0.2)" }}>{error}</div>
         )}
-
         <button onClick={handleEmail} disabled={loading}
           style={{ width:"100%", padding:14, borderRadius:12, border:"none", background:"linear-gradient(135deg,"+T.lime+",#6abf00)", color:"#071008", fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:2, cursor:"pointer", fontWeight:700, opacity:loading?0.7:1 }}>
           {loading ? "LOADING..." : mode === "signin" ? "SIGN IN" : "CREATE ACCOUNT"}
         </button>
-
         {mode === "signup" && (
-          <div style={{ fontSize:10, color:T.muted, textAlign:"center", marginTop:12 }}>
-            🎁 Get +10 points signup bonus when you join!
-          </div>
+          <div style={{ fontSize:10, color:T.muted, textAlign:"center", marginTop:12 }}>🎁 Get +10 points signup bonus when you join!</div>
         )}
       </div>
     </div>
@@ -653,7 +644,6 @@ function SetupProfile({ firebaseUser, onComplete }) {
       <img src={LOGO} alt="" style={{ width:70, height:70, objectFit:"contain", marginBottom:12 }} />
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:3, background:"linear-gradient(135deg,"+T.gold+",#c49a10)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:4 }}>SET UP YOUR PROFILE</div>
       <div style={{ fontSize:11, color:T.muted, letterSpacing:1.5, marginBottom:20, textAlign:"center" }}>One last step — choose how you appear in KickQuest</div>
-
       <div style={{ width:"100%", maxWidth:360 }}>
         <div style={{ marginBottom:20 }}>
           <div style={{ fontSize:11, color:T.muted, letterSpacing:1.5, marginBottom:10 }}>PICK YOUR AVATAR</div>
@@ -671,17 +661,13 @@ function SetupProfile({ firebaseUser, onComplete }) {
             <div style={{ width:60, height:60, borderRadius:"50%", border:"2px solid "+T.gold, background:T.card, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>{avatar}</div>
           </div>
         </div>
-
         <div style={{ marginBottom:16 }}>
           <div style={{ fontSize:11, color:T.muted, letterSpacing:1.5, marginBottom:8 }}>CHOOSE A USERNAME</div>
-          <input value={username} onChange={function(e){setUsername(e.target.value);setError("");}}
-            placeholder="e.g. FootballKing_GH"
-            maxLength={20}
+          <input value={username} onChange={function(e){setUsername(e.target.value);setError("");}} placeholder="e.g. FootballKing_GH" maxLength={20}
             style={{ width:"100%", padding:"13px 14px", borderRadius:12, border:"1px solid "+(error?T.red:T.border), background:T.card, color:T.white, fontSize:15, fontFamily:"'Outfit',sans-serif", outline:"none" }} />
           {error && <div style={{ fontSize:10, color:T.red, marginTop:6 }}>{error}</div>}
           <div style={{ fontSize:9, color:T.muted, marginTop:4 }}>3–20 characters. Letters, numbers and underscores only.</div>
         </div>
-
         <div style={{ marginBottom:24 }}>
           <div style={{ fontSize:11, color:T.muted, letterSpacing:1.5, marginBottom:8 }}>FAVOURITE TEAM <span style={{ opacity:0.5 }}>(optional)</span></div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
@@ -695,7 +681,6 @@ function SetupProfile({ firebaseUser, onComplete }) {
             })}
           </div>
         </div>
-
         <button onClick={handleDone}
           style={{ width:"100%", padding:15, borderRadius:12, border:"none", background:"linear-gradient(135deg,"+T.lime+",#6abf00)", color:"#071008", fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:2, cursor:"pointer", fontWeight:700 }}>
           LET'S GO ⚽
@@ -705,29 +690,21 @@ function SetupProfile({ firebaseUser, onComplete }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// PROFILE STORAGE (cross-device fix)
-// The user's profile {username, avatar, favTeam} is stored as JSON in the
-// Firebase Auth `displayName` field, so it's tied to the account, not the
-// device. localStorage is still used as a fast local cache.
-// ---------------------------------------------------------------------------
 function readProfileFromUser(fbUser) {
   if (fbUser.displayName) {
     try {
       const p = JSON.parse(fbUser.displayName);
       if (p && p.username) return p;
-    } catch (e) { /* not JSON, ignore */ }
+    } catch (e) {}
   }
   return null;
 }
 
 async function saveProfileToAccount(fbUser, profile) {
-  // Cache locally for instant loads on this device
   localStorage.setItem(uKey(fbUser.uid, "profile"), JSON.stringify(profile));
-  // Persist to the account itself so it follows the user across devices
   try {
     await updateProfile(fbUser, { displayName: JSON.stringify(profile) });
-  } catch (e) { /* non-fatal — local cache still works on this device */ }
+  } catch (e) {}
 }
 
 export default function App() {
@@ -763,78 +740,48 @@ export default function App() {
     setTimeout(function(){setToast(null);}, 3000);
   }
 
-  // Loads everything that depends on a logged-in user with a profile,
-  // and resolves the profile from displayName (account) first, falling
-  // back to / migrating the local cache for older accounts.
   async function loadUserSession(fbUser) {
     let p = readProfileFromUser(fbUser);
     if (!p) {
       const local = localStorage.getItem(uKey(fbUser.uid, "profile"));
-      if (local) {
-        p = JSON.parse(local);
-        // Migrate this device's local profile up to the account
-        saveProfileToAccount(fbUser, p);
-      }
+      if (local) { p = JSON.parse(local); saveProfileToAccount(fbUser, p); }
     } else {
-      // Keep local cache in sync
       localStorage.setItem(uKey(fbUser.uid, "profile"), JSON.stringify(p));
     }
-
-    if (!p) {
-      setScreen("setup");
-      return;
-    }
-
+    if (!p) { setScreen("setup"); return; }
     const fullUser = Object.assign({id:fbUser.uid, email:fbUser.email}, p);
     setUser(fullUser);
-
     const sp = localStorage.getItem(uKey(fbUser.uid,"pts"));
     const sr = localStorage.getItem(uKey(fbUser.uid,"preds"));
     const loadedPts = sp ? parseInt(sp) : 0;
     const loadedPreds = sr ? JSON.parse(sr) : {};
     setPts(loadedPts);
     setPreds(loadedPreds);
-
     const board = localStorage.getItem("kq_leaderboard");
     if (board) setLeaderboard(JSON.parse(board));
     updateLeaderboard(fullUser, loadedPts, loadedPreds);
-
     checkDailyBonus(fbUser.uid, loadedPts, function(newPts) {
       setPts(newPts);
       updateLeaderboard(fullUser, newPts, loadedPreds);
       showToast("🎁 Daily login bonus! +10pts", T.gold);
     });
-
     setScreen("app");
   }
 
   useEffect(function() {
     const unsub = onAuthStateChanged(auth, function(fbUser) {
-      if (fbUser) {
-        setFirebaseUser(fbUser);
-        loadUserSession(fbUser);
-      } else {
-        setFirebaseUser(null);
-        setUser(null);
-        setScreen("login");
-      }
+      if (fbUser) { setFirebaseUser(fbUser); loadUserSession(fbUser); }
+      else { setFirebaseUser(null); setUser(null); setScreen("login"); }
     });
     return unsub;
   }, []);
 
   function handleAuthSuccess(fbUser, isNew) {
     setFirebaseUser(fbUser);
-    if (isNew) {
-      setScreen("setup");
-      return;
-    }
+    if (isNew) { setScreen("setup"); return; }
     const p = readProfileFromUser(fbUser) || JSON.parse(localStorage.getItem(uKey(fbUser.uid,"profile")) || "null");
-    if (p) {
-      loadUserSession(fbUser);
-      showToast("Welcome back, @"+p.username+"!", T.gold);
-    } else {
-      setScreen("setup");
-    }
+    if (p) { loadUserSession(fbUser); showToast("Welcome back, @"+p.username+"!", T.gold); }
+    else { setScreen("setup"); }
   }
 
   async function handleSetupComplete(profile) {
@@ -844,8 +791,7 @@ export default function App() {
     setUser(fullUser);
     localStorage.setItem(uKey(firebaseUser.uid,"pts"), "10");
     localStorage.setItem(uKey(firebaseUser.uid,"lastlogin"), new Date().toDateString());
-    setPts(10);
-    setPreds({});
+    setPts(10); setPreds({});
     updateLeaderboard(fullUser, 10, {});
     setScreen("app");
     showToast("Welcome to KickQuest, @"+profile.username+"! +10pts signup bonus!", T.gold);
@@ -898,7 +844,6 @@ export default function App() {
   useEffect(function(){if(tab==="news") loadNews();}, [tab]);
   useEffect(function(){ loadNews(); }, []);
 
-  // ---- Live scores: load on mount and poll while the app is open ----------
   const loadScores = useCallback(function() {
     fetchLiveScores().then(function(map) {
       if (!map) return;
@@ -908,9 +853,6 @@ export default function App() {
 
   useEffect(function() {
     loadScores();
-    // Poll more often on days when a World Cup match is scheduled, since
-    // that's when the score data actually changes. Otherwise poll rarely
-    // to conserve the free 100 req/day API quota.
     const hasMatchToday = WC_FIXTURES.some(function(m) {
       return new Date(m.date).toDateString() === new Date().toDateString();
     });
@@ -919,29 +861,26 @@ export default function App() {
     return function() { clearInterval(t); };
   }, [loadScores]);
 
-  // ---- Award prediction points once a match's final score arrives ---------
   useEffect(function() {
     if (!user) return;
     if (!scores || Object.keys(scores).length === 0) return;
-
     const scoredKey = uKey(user.id, "scored");
     const stored = localStorage.getItem(scoredKey);
     const alreadyScored = stored ? JSON.parse(stored) : [];
-
     const { awards, newlyScored } = computePredictionAwards(scores, preds, alreadyScored);
     if (newlyScored.length === 0) return;
-
     localStorage.setItem(scoredKey, JSON.stringify(alreadyScored.concat(newlyScored)));
-
     if (awards.length > 0) {
       let totalAwarded = 0;
       awards.forEach(function(a){ totalAwarded += a.pts; });
       addPoints(totalAwarded);
       const exactCount = awards.filter(function(a){return a.type==="exact";}).length;
       const winnerCount = awards.filter(function(a){return a.type==="winner";}).length;
+      const bonusCount = awards.filter(function(a){return a.bonus;}).length;
       let msg = "🎉 Results in! +"+totalAwarded+" pts";
       if (exactCount) msg += " (🎯 "+exactCount+" exact)";
       if (winnerCount) msg += " (🏆 "+winnerCount+" correct result)";
+      if (bonusCount) msg += " 🔥 BONUS!";
       showToast(msg, T.gold);
     }
   }, [scores, user]);
@@ -997,7 +936,7 @@ export default function App() {
             </div>
             <div style={{ background:"rgba(245,197,24,0.06)", border:"1px solid rgba(245,197,24,0.2)", borderRadius:10, padding:"12px 14px", marginBottom:16 }}>
               <div style={{ fontSize:10, color:T.gold, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginBottom:6 }}>HOW TO EARN POINTS</div>
-              {[["🎁","Daily login","+10/day"],["🎯","Exact score (after result)","+100 pts"],["🏆","Correct winner (after result)","+50 pts"],["💬","Post banter","+5 pts"]].map(function(item,i){
+              {[["🎁","Daily login","+10/day"],["🎯","Exact score (after result)","+100 pts"],["🏆","Correct winner (after result)","+50 pts"],["💬","Post banter","+5 pts"],["🔥","Bonus challenge (exact)","+200 pts"]].map(function(item,i){
                 return (
                   <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:T.muted, marginBottom:3 }}>
                     <span>{item[0]} {item[1]}</span>
@@ -1229,6 +1168,7 @@ export default function App() {
               ["🎁","Daily login bonus","+10 pts"],
               ["🎯","Exact score (after result)","+100 pts"],
               ["🏆","Correct winner (after result)","+50 pts"],
+              ["🔥","Bonus challenge — exact score","+200 pts"],
               ["💬","Post banter","+5 pts"],
               ["📤","Share to TikTok or WhatsApp","+20 pts"],
               ["👥","Refer a friend","+200 pts"],
