@@ -321,6 +321,28 @@ function NavTab({ label, active, onClick }) {
   return <button onClick={onClick} style={{ flex:1, padding:"11px 2px 9px", border:"none", background:"transparent", color:active?T.gold:T.muted, fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.8, cursor:"pointer", borderBottom:active?"2px solid "+T.gold:"2px solid transparent", transition:"all 0.2s" }}>{label}</button>;
 }
 
+function WhatsAppCard() {
+  return (
+    <a href="https://whatsapp.com/channel/0029VbDZLtsHgZWXYbWmzr0C" target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none", display:"block", marginBottom:12 }}>
+      <div style={{ background:"linear-gradient(135deg,#0d2b1a,#0a1f13)", border:"1px solid #25D36640", borderRadius:14, padding:"14px 16px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 0 20px #25D36615", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#25D366,transparent)" }} />
+        <div style={{ width:46, height:46, borderRadius:12, background:"#25D366", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:24 }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"#25D366", letterSpacing:2, marginBottom:3 }}>JOIN OUR WHATSAPP CHANNEL</div>
+          <div style={{ fontSize:11, color:"rgba(240,237,230,0.6)", lineHeight:1.5 }}>Match alerts, bonus challenges & banter — all in one place</div>
+        </div>
+        <div style={{ background:"#25D366", borderRadius:20, padding:"6px 14px", flexShrink:0 }}>
+          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"#071008", letterSpacing:1.5 }}>JOIN</span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
 function Countdown() {
   const [cd, setCd] = useState(getCountdown());
   useEffect(function() {
@@ -702,9 +724,7 @@ function readProfileFromUser(fbUser) {
 
 async function saveProfileToAccount(fbUser, profile) {
   localStorage.setItem(uKey(fbUser.uid, "profile"), JSON.stringify(profile));
-  try {
-    await updateProfile(fbUser, { displayName: JSON.stringify(profile) });
-  } catch (e) {}
+  try { await updateProfile(fbUser, { displayName: JSON.stringify(profile) }); } catch (e) {}
 }
 
 export default function App() {
@@ -845,10 +865,7 @@ export default function App() {
   useEffect(function(){ loadNews(); }, []);
 
   const loadScores = useCallback(function() {
-    fetchLiveScores().then(function(map) {
-      if (!map) return;
-      setScores(map);
-    });
+    fetchLiveScores().then(function(map) { if (!map) return; setScores(map); });
   }, []);
 
   useEffect(function() {
@@ -948,6 +965,12 @@ export default function App() {
             <div style={{ background:"rgba(158,255,0,0.06)", border:"1px solid rgba(158,255,0,0.2)", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:11, color:T.muted, textAlign:"center" }}>
               🔒 Predictions are final once locked — no editing
             </div>
+            <a href="https://whatsapp.com/channel/0029VbDZLtsHgZWXYbWmzr0C" target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none", display:"block", marginBottom:12 }}>
+              <div style={{ background:"#25D366", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                <span style={{ fontSize:16 }}>💬</span>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"#071008", letterSpacing:2 }}>JOIN WHATSAPP CHANNEL</span>
+              </div>
+            </a>
             <button onClick={handleLogout} style={{ width:"100%", padding:14, background:"rgba(255,53,53,0.15)", border:"1px solid rgba(255,53,53,0.4)", borderRadius:12, color:T.red, fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:2, cursor:"pointer" }}>
               SIGN OUT
             </button>
@@ -993,6 +1016,7 @@ export default function App() {
         {tab==="matches" && (
           <div>
             <Countdown />
+            <WhatsAppCard />
             <div style={{ marginBottom:14 }}>
               <div style={{ fontSize:9, color:T.muted, letterSpacing:2, marginBottom:8 }}>FILTER BY GROUP</div>
               <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
@@ -1203,6 +1227,7 @@ export default function App() {
                 );
               })}
             </div>
+            <div style={{ marginTop:20 }}><WhatsAppCard /></div>
           </div>
         )}
 
