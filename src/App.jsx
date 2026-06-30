@@ -112,6 +112,27 @@ const WC_FIXTURES = [
   {id:72,home:"Ghana",away:"Panama",date:"2026-06-17T23:00:00Z",group:"L",venue:"New York"},
 ];
 
+const WC_ROUND_OF_32 = [
+  {id:101,home:"South Africa",away:"Canada",date:"2026-06-28T19:00:00Z",stage:"R32",venue:"Los Angeles"},
+  {id:102,home:"Brazil",away:"Japan",date:"2026-06-29T17:00:00Z",stage:"R32",venue:"Houston"},
+  {id:103,home:"Germany",away:"Paraguay",date:"2026-06-29T20:30:00Z",stage:"R32",venue:"Boston"},
+  {id:104,home:"Netherlands",away:"Morocco",date:"2026-06-30T01:00:00Z",stage:"R32",venue:"Monterrey"},
+  {id:105,home:"Ivory Coast",away:"Norway",date:"2026-06-30T17:00:00Z",stage:"R32",venue:"Dallas"},
+  {id:106,home:"France",away:"Sweden",date:"2026-06-30T21:00:00Z",stage:"R32",venue:"New York"},
+  {id:107,home:"Mexico",away:"Ecuador",date:"2026-07-01T02:00:00Z",stage:"R32",venue:"Mexico City"},
+  {id:108,home:"England",away:"DR Congo",date:"2026-07-01T16:00:00Z",stage:"R32",venue:"Atlanta"},
+  {id:109,home:"Belgium",away:"Senegal",date:"2026-07-01T20:00:00Z",stage:"R32",venue:"Seattle"},
+  {id:110,home:"USA",away:"Bosnia & Herz.",date:"2026-07-02T00:00:00Z",stage:"R32",venue:"San Francisco"},
+  {id:111,home:"Spain",away:"Austria",date:"2026-07-02T19:00:00Z",stage:"R32",venue:"Los Angeles"},
+  {id:112,home:"Portugal",away:"Croatia",date:"2026-07-02T23:00:00Z",stage:"R32",venue:"Toronto"},
+  {id:113,home:"Switzerland",away:"Algeria",date:"2026-07-03T03:00:00Z",stage:"R32",venue:"Vancouver"},
+  {id:114,home:"Australia",away:"Egypt",date:"2026-07-03T18:00:00Z",stage:"R32",venue:"Dallas"},
+  {id:115,home:"Argentina",away:"Cape Verde",date:"2026-07-03T22:00:00Z",stage:"R32",venue:"Miami"},
+  {id:116,home:"Colombia",away:"Ghana",date:"2026-07-04T01:30:00Z",stage:"R32",venue:"Kansas City"},
+];
+
+const ALL_FIXTURES = WC_FIXTURES.concat(WC_ROUND_OF_32);
+
 function getCountdown() {
   const diff = WC_DATE - new Date();
   if (diff <= 0) return null;
@@ -194,16 +215,10 @@ async function fetchTeamNews(team) {
   } catch (e) { return []; }
 }
 
-// ---------------------------------------------------------------------------
-// BONUS CHALLENGE MATCHES
-// ---------------------------------------------------------------------------
 const BONUS_MATCHES = {
-  72: { label: "🇬🇭 GHANA BONUS CHALLENGE!", exactPts: 200, winnerPts: 100 },
+  116: { label: "🇬🇭 GHANA BONUS CHALLENGE!", exactPts: 200, winnerPts: 100 },
 };
 
-// ---------------------------------------------------------------------------
-// LIVE SCORES (date-based — works on the API-Football free plan)
-// ---------------------------------------------------------------------------
 const TEAM_ALIASES = {
   "South Korea": ["South Korea", "Korea Republic"],
   "Czechia": ["Czechia", "Czech Republic"],
@@ -250,7 +265,7 @@ async function fetchScoresForDate(date, key, map) {
       const awayName = f.teams && f.teams.away && f.teams.away.name;
       const status = f.fixture && f.fixture.status && f.fixture.status.short;
       const goals = f.goals || {};
-      WC_FIXTURES.forEach(function(fix) {
+      ALL_FIXTURES.forEach(function(fix) {
         if (teamNameMatches(fix.home, homeName) && teamNameMatches(fix.away, awayName)) {
           map[fix.id] = {
             home: typeof goals.home === "number" ? goals.home : null,
@@ -310,7 +325,6 @@ function computePredictionAwards(scoreMap, preds, alreadyScored) {
   });
   return { awards, newlyScored };
 }
-
 function Dot() {
   return <span style={{ display:"inline-block", width:7, height:7, borderRadius:"50%", background:T.red, boxShadow:"0 0 6px "+T.red, animation:"pulse 1.1s infinite", marginRight:5 }} />;
 }
@@ -403,7 +417,7 @@ function MatchCard({ match, pred, score, onPredict }) {
       )}
       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <span style={{ fontSize:9, color:T.gold, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, background:"rgba(245,197,24,0.12)", padding:"2px 7px", borderRadius:5 }}>GROUP {match.group}</span>
+          <span style={{ fontSize:9, color:T.gold, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, background:"rgba(245,197,24,0.12)", padding:"2px 7px", borderRadius:5 }}>{match.stage==="R32" ? "ROUND OF 32" : "GROUP "+match.group}</span>
           <span style={{ fontSize:9, color:T.muted }}>· {match.venue}</span>
         </div>
         <span style={{ display:"flex", alignItems:"center", fontSize:10, color:live?T.red:done?T.muted:T.lime, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
@@ -472,7 +486,7 @@ function PredictModal({ match, onClose, onSubmit }) {
       <div onClick={function(e){e.stopPropagation();}} style={{ width:"100%", maxWidth:430, margin:"0 auto", background:T.surface, border:"1px solid "+T.border, borderRadius:"22px 22px 0 0", padding:"20px 20px 40px", animation:"slideUp 0.3s ease-out" }}>
         <div style={{ width:36, height:4, background:T.faint, borderRadius:2, margin:"0 auto 20px" }} />
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:T.gold, letterSpacing:2, marginBottom:4 }}>PREDICT SCORE</div>
-        <div style={{ fontSize:11, color:T.muted, marginBottom:8 }}>Group {match.group} · {fmtDate(match.date)}</div>
+        <div style={{ fontSize:11, color:T.muted, marginBottom:8 }}>{match.stage==="R32" ? "Round of 32" : "Group "+match.group} · {fmtDate(match.date)}</div>
         {bonus && (
           <div style={{ background:"linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.1))", border:"1px solid rgba(255,215,0,0.5)", borderRadius:8, padding:"8px 12px", marginBottom:10, textAlign:"center" }}>
             <div style={{ fontSize:12, color:T.gold, fontWeight:700 }}>{bonus.label}</div>
@@ -726,13 +740,13 @@ async function saveProfileToAccount(fbUser, profile) {
   localStorage.setItem(uKey(fbUser.uid, "profile"), JSON.stringify(profile));
   try { await updateProfile(fbUser, { displayName: JSON.stringify(profile) }); } catch (e) {}
 }
-
 export default function App() {
   const [screen, setScreen] = useState("loading");
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState("matches");
   const [filter, setFilter] = useState("ALL");
+  const [stageView, setStageView] = useState("R32");
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState(false);
@@ -870,7 +884,7 @@ export default function App() {
 
   useEffect(function() {
     loadScores();
-    const hasMatchToday = WC_FIXTURES.some(function(m) {
+    const hasMatchToday = ALL_FIXTURES.some(function(m) {
       return new Date(m.date).toDateString() === new Date().toDateString();
     });
     const interval = hasMatchToday ? 5 * 60000 : 30 * 60000;
@@ -902,10 +916,12 @@ export default function App() {
     }
   }, [scores, user]);
 
-  const filteredMatches = filter==="ALL" ? WC_FIXTURES : WC_FIXTURES.filter(function(m){return m.group===filter;});
+  const filteredMatches = stageView === "R32"
+    ? WC_ROUND_OF_32
+    : (filter==="ALL" ? WC_FIXTURES : WC_FIXTURES.filter(function(m){return m.group===filter;}));
   const predCount = Object.keys(preds).length;
   const myRank = user ? leaderboard.findIndex(function(x){return x.id===user.id;})+1 : 0;
-  const liveCount = WC_FIXTURES.filter(function(m){return getMatchStatus(m, scores)==="live";}).length;
+  const liveCount = ALL_FIXTURES.filter(function(m){return getMatchStatus(m, scores)==="live";}).length;
 
   if (screen==="loading") return <LoadingScreen />;
   if (screen==="login") return <AuthScreen onSuccess={handleAuthSuccess} />;
@@ -942,7 +958,7 @@ export default function App() {
               </div>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:20 }}>
-              {[[pts,"POINTS"],[predCount+"/"+WC_FIXTURES.length,"PREDICTED"],[myRank>0?"#"+myRank:"-","RANK"]].map(function(item,i){
+              {[[pts,"POINTS"],[predCount+"/"+ALL_FIXTURES.length,"PREDICTED"],[myRank>0?"#"+myRank:"-","RANK"]].map(function(item,i){
                 return (
                   <div key={i} style={{ background:T.card, border:"1px solid "+T.border, borderRadius:12, padding:"12px 8px", textAlign:"center" }}>
                     <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:T.gold }}>{item[0]}</div>
@@ -1017,19 +1033,31 @@ export default function App() {
           <div>
             <Countdown />
             <WhatsAppCard />
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:9, color:T.muted, letterSpacing:2, marginBottom:8 }}>FILTER BY GROUP</div>
-              <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
-                {GROUPS.map(function(g){
-                  return (
-                    <button key={g} onClick={function(){setFilter(g);}}
-                      style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, border:"1px solid "+(filter===g?T.gold:T.border), background:filter===g?"rgba(245,197,24,0.15)":T.faint, color:filter===g?T.gold:T.muted, fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, cursor:"pointer" }}>
-                      {g==="ALL"?"ALL":"GRP "+g}
-                    </button>
-                  );
-                })}
-              </div>
+            <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+              <button onClick={function(){setStageView("R32");}}
+                style={{ flex:1, padding:"10px 6px", borderRadius:12, border:"1px solid "+(stageView==="R32"?T.gold:T.border), background:stageView==="R32"?"rgba(245,197,24,0.15)":T.card, color:stageView==="R32"?T.gold:T.muted, fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:1.5, cursor:"pointer" }}>
+                🔥 ROUND OF 32
+              </button>
+              <button onClick={function(){setStageView("GROUP");}}
+                style={{ flex:1, padding:"10px 6px", borderRadius:12, border:"1px solid "+(stageView==="GROUP"?T.gold:T.border), background:stageView==="GROUP"?"rgba(245,197,24,0.15)":T.card, color:stageView==="GROUP"?T.gold:T.muted, fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:1.5, cursor:"pointer" }}>
+                GROUP STAGE
+              </button>
             </div>
+            {stageView==="GROUP" && (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:9, color:T.muted, letterSpacing:2, marginBottom:8 }}>FILTER BY GROUP</div>
+                <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
+                  {GROUPS.map(function(g){
+                    return (
+                      <button key={g} onClick={function(){setFilter(g);}}
+                        style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, border:"1px solid "+(filter===g?T.gold:T.border), background:filter===g?"rgba(245,197,24,0.15)":T.faint, color:filter===g?T.gold:T.muted, fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, cursor:"pointer" }}>
+                        {g==="ALL"?"ALL":"GRP "+g}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div style={{ fontSize:9, color:T.muted, letterSpacing:2, marginBottom:10 }}>{filteredMatches.length} MATCHES · {predCount} LOCKED IN</div>
             {filteredMatches.map(function(m){
               return <MatchCard key={m.id} match={m} pred={preds[m.id]} score={scores[m.id]} onPredict={setPredictModal} />;
@@ -1143,7 +1171,7 @@ export default function App() {
                 </div>
               </div>
               <div style={{ display:"flex", gap:10 }}>
-                {[[predCount+"/"+WC_FIXTURES.length,"PREDICTED"],[pts>=500?"🏅":"—","BADGE"],[myRank>0?"#"+myRank:"-","RANK"]].map(function(item,i){
+                {[[predCount+"/"+ALL_FIXTURES.length,"PREDICTED"],[pts>=500?"🏅":"—","BADGE"],[myRank>0?"#"+myRank:"-","RANK"]].map(function(item,i){
                   return (
                     <div key={i} style={{ flex:1, background:"rgba(240,237,230,0.08)", borderRadius:10, padding:"10px 6px", textAlign:"center" }}>
                       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:T.lime }}>{item[0]}</div>
