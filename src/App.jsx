@@ -599,8 +599,195 @@ function TeamModal({team,onClose}){
           <div style={{fontFamily:"Inter,sans-serif",fontWeight:800,fontSize:16,color:T.white}}>{team} — Latest News</div>
           <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",color:T.white,fontSize:18,cursor:"pointer",width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
-        {loading&&<div style={{textAlign:"center",padding:"28
-      export default function App(){
+        {loading&&<div style={{textAlign:"center",padding:"28px 0",color:T.muted}}><div style={{fontSize:32,animation:"spin 0.9s linear infinite",display:"inline-block"}}>⚽</div></div>}
+        {!loading&&articles.length===0&&<div style={{color:T.muted,fontSize:12,textAlign:"center",padding:"20px 0",fontFamily:"Inter,sans-serif"}}>No recent news for {team}.</div>}
+        {!loading&&articles.map(function(a,i){
+          return(
+            <div key={i} style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+T.border,borderRadius:12,padding:"12px 14px",marginBottom:8}}>
+              <div style={{fontSize:12,color:T.white,lineHeight:1.6,marginBottom:6,fontFamily:"Inter,sans-serif"}}>{a.title}</div>
+              <div style={{display:"flex",justifyContent:"space-between"}}>
+                <span style={{fontSize:9,color:T.muted,fontFamily:"Inter,sans-serif"}}>{timeAgo(a.pubDate)}</span>
+                {a.link&&<a href={a.link} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:T.lime,textDecoration:"none",fontFamily:"Inter,sans-serif",fontWeight:600}}>Read →</a>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LoadingScreen(){
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <style>{CSS}</style>
+      <img src={LOGO} alt="" style={{width:80,height:80,objectFit:"contain",marginBottom:20,animation:"float 2s ease-in-out infinite"}}/>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,letterSpacing:4,background:"linear-gradient(135deg,"+T.gold+",#e8a800)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:20}}>KICKQUEST</div>
+      <div style={{fontSize:28,animation:"spin 1s linear infinite"}}>⚽</div>
+    </div>
+  );
+}
+
+function AuthScreen({onSuccess}){
+  const [mode,setMode]=useState("signin");
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [confirm,setConfirm]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+
+  function parseError(err){
+    const c=err.code||"";
+    if(c.includes("email-already")) return "This email is already registered.";
+    if(c.includes("wrong-password")||c.includes("invalid-credential")) return "Incorrect email or password.";
+    if(c.includes("user-not-found")) return "No account found with this email.";
+    if(c.includes("weak-password")) return "Password must be at least 6 characters.";
+    if(c.includes("invalid-email")) return "Please enter a valid email address.";
+    if(c.includes("popup-closed")) return "";
+    return "Something went wrong. Please try again.";
+  }
+
+  async function handleEmail(){
+    setError("");
+    if(!email.trim()||!password.trim()){setError("Please fill in all fields.");return;}
+    if(mode==="signup"&&password!==confirm){setError("Passwords do not match.");return;}
+    if(mode==="signup"&&password.length<6){setError("Password must be at least 6 characters.");return;}
+    setLoading(true);
+    try{
+      if(mode==="signup"){const cred=await createUserWithEmailAndPassword(auth,email.trim(),password);onSuccess(cred.user,true);}
+      else{const cred=await signInWithEmailAndPassword(auth,email.trim(),password);onSuccess(cred.user,false);}
+    }catch(err){setLoading(false);setError(parseError(err));}
+  }
+
+  async function handleGoogle(){
+    setError("");setLoading(true);
+    try{
+      const cred=await signInWithPopup(auth,googleProvider);
+      const isNew=!!(cred._tokenResponse&&cred._tokenResponse.isNewUser);
+      onSuccess(cred.user,isNew);
+    }catch(err){setLoading(false);const e=parseError(err);if(e)setError(e);}
+  }
+
+  const inp={width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+T.border,background:"rgba(255,255,255,0.05)",color:T.white,fontSize:15,fontFamily:"Inter,sans-serif",outline:"none",marginBottom:12,transition:"border-color 0.2s"};
+
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#071a0d 0%,#040d08 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"Inter,sans-serif",position:"relative",overflow:"hidden"}}>
+      <style>{CSS}</style>
+      <div style={{position:"absolute",top:-100,right:-100,width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(245,197,24,0.06),transparent 70%)"}}/>
+      <div style={{position:"absolute",bottom:-80,left:-80,width:250,height:250,borderRadius:"50%",background:"radial-gradient(circle,rgba(127,255,0,0.04),transparent 70%)"}}/>
+      <div style={{position:"relative",width:"100%",maxWidth:360}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <img src={LOGO} alt="KickQuest" style={{width:80,height:80,objectFit:"contain",marginBottom:16,animation:"float 3s ease-in-out infinite"}}/>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:40,letterSpacing:5,background:"linear-gradient(135deg,"+T.gold+",#e8a800)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>KICKQUEST</div>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:2,marginTop:6}}>PREDICT · PLAY · WIN THE WORLD CUP</div>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.04)",backdropFilter:"blur(20px)",border:"1px solid "+T.border,borderRadius:20,padding:"24px 20px"}}>
+          <div style={{display:"flex",background:"rgba(255,255,255,0.04)",borderRadius:12,padding:4,marginBottom:22,gap:4}}>
+            {[{id:"signin",label:"Sign In"},{id:"signup",label:"Create Account"}].map(function(m){
+              return(
+                <button key={m.id} onClick={function(){setMode(m.id);setError("");setEmail("");setPassword("");setConfirm("");}}
+                  style={{flex:1,padding:"10px 6px",borderRadius:10,border:"none",background:mode===m.id?"linear-gradient(135deg,"+T.gold+",#e8a800)":"transparent",color:mode===m.id?"#040d08":T.muted,fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          <button onClick={handleGoogle} disabled={loading}
+            style={{width:"100%",padding:"13px",borderRadius:14,border:"1px solid "+T.border,background:"rgba(255,255,255,0.06)",color:T.white,fontSize:14,fontFamily:"Inter,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:18,fontWeight:600,opacity:loading?0.7:1,transition:"all 0.2s"}}>
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.5 26.7 36 24 36c-5.2 0-9.7-3.3-11.3-8H6.1C9.5 35.7 16.2 44 24 44z"/>
+              <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.3 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+            </svg>
+            Continue with Google
+          </button>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+            <div style={{flex:1,height:1,background:T.border}}/>
+            <span style={{fontSize:11,color:T.muted,fontFamily:"Inter,sans-serif"}}>or email</span>
+            <div style={{flex:1,height:1,background:T.border}}/>
+          </div>
+          <input value={email} onChange={function(e){setEmail(e.target.value);setError("");}} placeholder="Email address" type="email" style={inp}/>
+          <input value={password} onChange={function(e){setPassword(e.target.value);setError("");}} placeholder="Password (min 6 chars)" type="password" style={{...inp,marginBottom:mode==="signup"?12:18}}/>
+          {mode==="signup"&&<input value={confirm} onChange={function(e){setConfirm(e.target.value);setError("");}} placeholder="Confirm password" type="password" style={{...inp,marginBottom:18}}/>}
+          {error!==""&&<div style={{fontSize:12,color:T.red,marginBottom:14,textAlign:"center",padding:"10px 14px",background:"rgba(255,68,68,0.08)",borderRadius:10,border:"1px solid rgba(255,68,68,0.2)",fontFamily:"Inter,sans-serif"}}>{error}</div>}
+          <button onClick={handleEmail} disabled={loading}
+            style={{width:"100%",padding:14,borderRadius:14,border:"1px solid rgba(127,255,0,0.3)",background:"linear-gradient(135deg,#1a3a08,#0f2a05)",color:T.lime,fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:15,cursor:"pointer",opacity:loading?0.7:1,transition:"all 0.2s"}}>
+            {loading?"Loading...":mode==="signin"?"Sign In":"Create Account"}
+          </button>
+          {mode==="signup"&&<div style={{fontSize:11,color:T.muted,textAlign:"center",marginTop:12,fontFamily:"Inter,sans-serif"}}>🎁 +10 points signup bonus when you join!</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetupProfile({firebaseUser,onComplete}){
+  const [username,setUsername]=useState("");
+  const [avatar,setAvatar]=useState("⚽");
+  const [favTeam,setFavTeam]=useState("");
+  const [error,setError]=useState("");
+
+  function handleDone(){
+    const u=username.trim();
+    if(u.length<3){setError("Username must be at least 3 characters");return;}
+    if(u.length>20){setError("Username must be 20 characters or less");return;}
+    if(!/^[a-zA-Z0-9_]+$/.test(u)){setError("Only letters, numbers and underscores");return;}
+    onComplete({username:u,avatar,favTeam:favTeam.trim()});
+  }
+
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#071a0d 0%,#040d08 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"Inter,sans-serif",overflowY:"auto"}}>
+      <style>{CSS}</style>
+      <img src={LOGO} alt="" style={{width:64,height:64,objectFit:"contain",marginBottom:12}}/>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:3,background:"linear-gradient(135deg,"+T.gold+",#e8a800)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:4}}>SET UP YOUR PROFILE</div>
+      <div style={{fontSize:12,color:T.muted,marginBottom:24,textAlign:"center",fontFamily:"Inter,sans-serif"}}>One last step — choose how you appear in KickQuest</div>
+      <div style={{width:"100%",maxWidth:360}}>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:10,fontWeight:600,fontFamily:"Inter,sans-serif"}}>PICK YOUR AVATAR</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+            {AVATARS.map(function(em){
+              return(
+                <button key={em} onClick={function(){setAvatar(em);}}
+                  style={{width:46,height:46,borderRadius:12,border:"2px solid "+(avatar===em?T.gold:T.border),background:avatar===em?"rgba(245,197,24,0.12)":"rgba(255,255,255,0.04)",fontSize:22,cursor:"pointer",transition:"all 0.2s"}}>
+                  {em}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{width:64,height:64,borderRadius:"50%",border:"2px solid "+T.gold,background:"rgba(245,197,24,0.08)",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:32,boxShadow:"0 0 20px rgba(245,197,24,0.2)"}}>{avatar}</div>
+          </div>
+        </div>
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:8,fontWeight:600,fontFamily:"Inter,sans-serif"}}>USERNAME</div>
+          <input value={username} onChange={function(e){setUsername(e.target.value);setError("");}} placeholder="e.g. FootballKing_GH" maxLength={20}
+            style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+(error?T.red:T.border),background:"rgba(255,255,255,0.05)",color:T.white,fontSize:15,fontFamily:"Inter,sans-serif",outline:"none"}}/>
+          {error&&<div style={{fontSize:11,color:T.red,marginTop:6,fontFamily:"Inter,sans-serif"}}>{error}</div>}
+          <div style={{fontSize:10,color:T.muted,marginTop:5,fontFamily:"Inter,sans-serif"}}>3–20 characters · letters, numbers and underscores only</div>
+        </div>
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:8,fontWeight:600,fontFamily:"Inter,sans-serif"}}>FAVOURITE TEAM <span style={{opacity:0.5}}>(optional)</span></div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {TEAMS.map(function(t){
+              return(
+                <button key={t} onClick={function(){setFavTeam(favTeam===t?"":t);}}
+                  style={{padding:"6px 12px",borderRadius:20,border:"1px solid "+(favTeam===t?T.gold:T.border),background:favTeam===t?"rgba(245,197,24,0.12)":"rgba(255,255,255,0.04)",color:favTeam===t?T.gold:T.muted,fontSize:11,fontFamily:"Inter,sans-serif",cursor:"pointer",transition:"all 0.2s"}}>
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <button onClick={handleDone}
+          style={{width:"100%",padding:15,borderRadius:14,border:"1px solid rgba(127,255,0,0.3)",background:"linear-gradient(135deg,#1a3a08,#0f2a05)",color:T.lime,fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:16,cursor:"pointer"}}>
+          Let's Go ⚽
+        </button>
+      </div>
+    </div>
+  );
+}
+export default function App(){
   const [screen,setScreen]=useState("loading");
   const [firebaseUser,setFirebaseUser]=useState(null);
   const [user,setUser]=useState(null);
@@ -941,4 +1128,195 @@ function TeamModal({team,onClose}){
                 🔥 Round of 32
               </button>
               <button onClick={function(){setStageView("GROUP");}}
-                style={{flex:1,padding:"11px 6px",borderRadius:12,border:"1px solid "+(stageView==="GROUP"?T.gold:T.border),background:stageView==="GROUP"?"rgba(245,197,24,0
+                style={{flex:1,padding:"11px 6px",borderRadius:12,border:"1px solid "+(stageView==="GROUP"?T.gold:T.border),background:stageView==="GROUP"?"rgba(245,197,24,0.12)":"rgba(255,255,255,0.04)",color:stageView==="GROUP"?T.gold:T.muted,fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>
+                Group Stage
+              </button>
+            </div>
+            {stageView==="GROUP"&&(
+              <div style={{marginBottom:16}}>
+                <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>
+                  {GROUPS.map(function(g){
+                    return(
+                      <button key={g} onClick={function(){setFilter(g);}}
+                        style={{flexShrink:0,padding:"6px 12px",borderRadius:20,border:"1px solid "+(filter===g?T.gold:T.border),background:filter===g?"rgba(245,197,24,0.12)":"rgba(255,255,255,0.04)",color:filter===g?T.gold:T.muted,fontSize:11,fontFamily:"Inter,sans-serif",fontWeight:600,cursor:"pointer",transition:"all 0.2s"}}>
+                        {g==="ALL"?"All":"Grp "+g}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{fontSize:10,color:T.muted,marginBottom:12,fontFamily:"Inter,sans-serif",letterSpacing:0.5}}>
+              {groupedMatches.length} matches · {predCount} predicted
+            </div>
+            {groupedMatches.map(function(m){
+              return <MatchCard key={m.id} match={m} pred={preds[m.id]} score={scores[m.id]} onPredict={setPredictModal}/>;
+            })}
+          </div>
+        )}
+
+        {tab==="news"&&(
+          <div style={{animation:"fadeIn 0.3s ease-out"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div>
+                <div style={{fontSize:16,color:T.white,fontWeight:700,fontFamily:"Inter,sans-serif"}}>World Cup 2026 News</div>
+                <div style={{fontSize:10,color:T.muted,marginTop:2,fontFamily:"Inter,sans-serif"}}>via NewsData.io</div>
+              </div>
+              <button onClick={loadNews} disabled={newsLoading} style={{background:"rgba(255,255,255,0.06)",border:"1px solid "+T.border,borderRadius:20,padding:"7px 16px",color:newsLoading?T.muted:T.lime,fontSize:11,fontFamily:"Inter,sans-serif",fontWeight:600,cursor:"pointer"}}>
+                {newsLoading?"Loading...":"↻ Refresh"}
+              </button>
+            </div>
+            {newsLoading&&<div style={{textAlign:"center",padding:"40px 0",color:T.muted}}><div style={{fontSize:32,animation:"spin 0.9s linear infinite",display:"inline-block"}}>⚽</div><div style={{fontSize:11,marginTop:10,fontFamily:"Inter,sans-serif",letterSpacing:1}}>Fetching news...</div></div>}
+            {!newsLoading&&newsError&&(
+              <div style={{background:"rgba(255,68,68,0.06)",border:"1px solid rgba(255,68,68,0.2)",borderRadius:16,padding:"20px",textAlign:"center"}}>
+                <div style={{fontSize:13,color:T.red,marginBottom:12,fontFamily:"Inter,sans-serif"}}>Could not load news.</div>
+                <button onClick={loadNews} style={{background:T.red,border:"none",borderRadius:10,padding:"9px 20px",color:"#fff",fontSize:12,fontFamily:"Inter,sans-serif",fontWeight:700,cursor:"pointer"}}>Retry</button>
+              </div>
+            )}
+            {!newsLoading&&!newsError&&news.length===0&&(
+              <div style={{textAlign:"center",padding:"40px 0"}}>
+                <button onClick={loadNews} style={{background:"linear-gradient(135deg,#1a3a08,#0f2a05)",border:"1px solid rgba(127,255,0,0.3)",borderRadius:14,padding:"12px 24px",color:T.lime,fontSize:13,fontFamily:"Inter,sans-serif",fontWeight:700,cursor:"pointer"}}>Load News</button>
+              </div>
+            )}
+            {!newsLoading&&news.map(function(item,i){
+              return(
+                <div key={i} style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+T.border,borderRadius:16,padding:"14px",marginBottom:10,display:"flex",gap:12,alignItems:"flex-start"}}>
+                  <div onClick={function(){setTeamModal(item.source);}} style={{width:44,height:44,borderRadius:12,background:"rgba(127,255,0,0.06)",border:"1px solid rgba(127,255,0,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0,cursor:"pointer"}}>{item.emoji}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:T.white,lineHeight:1.6,marginBottom:8,fontWeight:500,fontFamily:"Inter,sans-serif"}}>{item.title}</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <span onClick={function(){setTeamModal(item.source);}} style={{fontSize:10,color:T.lime,cursor:"pointer",fontWeight:700,fontFamily:"Inter,sans-serif"}}>{item.source?item.source.toUpperCase():""}</span>
+                      <span style={{fontSize:10,color:T.muted,fontFamily:"Inter,sans-serif"}}>{item.time}</span>
+                      {item.url&&<a href={item.url} target="_blank" rel="noopener noreferrer" style={{marginLeft:"auto",fontSize:11,color:T.gold,textDecoration:"none",fontWeight:600,fontFamily:"Inter,sans-serif"}}>Read →</a>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab==="banter"&&(
+          <div style={{animation:"fadeIn 0.3s ease-out"}}>
+            <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+T.border,borderRadius:16,padding:"16px",marginBottom:16}}>
+              <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
+                <div style={{width:36,height:36,borderRadius:"50%",border:"1px solid "+T.border,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{user.avatar}</div>
+                <div style={{fontSize:13,color:T.gold,fontFamily:"Inter,sans-serif",fontWeight:700}}>@{user.username}</div>
+              </div>
+              <input value={banterInput} onChange={function(e){setBanterInput(e.target.value);}}
+                onKeyDown={function(e){
+                  if(e.key==="Enter"&&banterInput.trim()){
+                    setBanter(function(f){return [{username:user.username,avatar:user.avatar,time:"now",msg:banterInput,likes:0}].concat(f);});
+                    setBanterInput("");addPoints(5);
+                    showToast("Banter posted! +5pts",T.gold);
+                  }
+                }}
+                placeholder="Who's winning the World Cup?..."
+                style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid "+T.border,borderRadius:12,padding:"12px 14px",outline:"none",color:T.white,fontSize:13,fontFamily:"Inter,sans-serif",marginBottom:12}}/>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                {["🔥","😂","💀","👀","🐐","🏆"].map(function(e){
+                  return <span key={e} style={{fontSize:20,cursor:"pointer"}} onClick={function(){setBanterInput(function(v){return v+e;});}}>{e}</span>;
+                })}
+                <button onClick={function(){
+                  if(!banterInput.trim()) return;
+                  setBanter(function(f){return [{username:user.username,avatar:user.avatar,time:"now",msg:banterInput,likes:0}].concat(f);});
+                  setBanterInput("");addPoints(5);
+                  showToast("Banter posted! +5pts",T.gold);
+                }} style={{marginLeft:"auto",background:"linear-gradient(135deg,#1a3a08,#0f2a05)",border:"1px solid rgba(127,255,0,0.3)",borderRadius:10,padding:"8px 18px",color:T.lime,fontSize:13,fontFamily:"Inter,sans-serif",fontWeight:700,cursor:"pointer"}}>Post</button>
+              </div>
+            </div>
+            {banter.map(function(b,i){
+              return(
+                <div key={i} style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+T.border,borderRadius:16,padding:"14px",marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                    <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{b.avatar||"⚽"}</div>
+                    <span style={{fontSize:13,fontWeight:700,color:T.gold,fontFamily:"Inter,sans-serif"}}>@{b.username}</span>
+                    <span style={{fontSize:10,color:T.muted,marginLeft:"auto",fontFamily:"Inter,sans-serif"}}>{b.time}</span>
+                  </div>
+                  <p style={{fontSize:13,margin:"0 0 12px",lineHeight:1.6,color:T.white,fontFamily:"Inter,sans-serif"}}>{b.msg}</p>
+                  <div style={{display:"flex",gap:16}}>
+                    <span onClick={function(){setBanter(function(f){return f.map(function(x,j){return j===i?Object.assign({},x,{likes:x.likes+1}):x;});});}} style={{fontSize:12,color:T.muted,cursor:"pointer",fontFamily:"Inter,sans-serif",display:"flex",alignItems:"center",gap:4}}>🔥 {b.likes}</span>
+                    <span style={{fontSize:12,color:T.muted,cursor:"pointer",fontFamily:"Inter,sans-serif"}}>↩ Reply</span>
+                    <span style={{fontSize:12,color:T.muted,cursor:"pointer",marginLeft:"auto",fontFamily:"Inter,sans-serif"}}>📤</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab==="leaders"&&(
+          <div style={{animation:"fadeIn 0.3s ease-out"}}>
+            <div style={{background:"linear-gradient(135deg,#141000,#0a1a08)",border:"1px solid rgba(245,197,24,0.2)",borderRadius:20,padding:"20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,"+T.gold+",transparent)"}}/>
+              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+                <div style={{width:56,height:56,borderRadius:"50%",border:"2px solid "+T.gold,background:"rgba(245,197,24,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,boxShadow:"0 0 20px rgba(245,197,24,0.2)"}}>{user.avatar}</div>
+                <div>
+                  <div style={{fontFamily:"Inter,sans-serif",fontWeight:800,fontSize:18,color:T.gold}}>@{user.username}</div>
+                  {user.favTeam&&<div style={{fontSize:11,color:T.muted,marginTop:2,fontFamily:"Inter,sans-serif"}}>Supports {user.favTeam}</div>}
+                  <div style={{fontSize:11,color:T.lime,marginTop:3,fontFamily:"Inter,sans-serif",fontWeight:600}}>Rank {myRank>0?"#"+myRank:"Unranked"}</div>
+                </div>
+                <div style={{marginLeft:"auto",textAlign:"right"}}>
+                  <div style={{fontFamily:"Inter,sans-serif",fontWeight:900,fontSize:32,color:T.gold}}>{pts}</div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:1,fontFamily:"Inter,sans-serif"}}>POINTS</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                {[[predCount+"/"+ALL_FIXTURES.length,"PREDICTED"],[pts>=500?"🏅":"—","BADGE"],[myRank>0?"#"+myRank:"–","RANK"]].map(function(item,i){
+                  return(
+                    <div key={i} style={{flex:1,background:"rgba(255,255,255,0.06)",borderRadius:12,padding:"10px 6px",textAlign:"center"}}>
+                      <div style={{fontFamily:"Inter,sans-serif",fontWeight:800,fontSize:16,color:T.lime}}>{item[0]}</div>
+                      <div style={{fontSize:8,color:T.muted,letterSpacing:1,fontFamily:"Inter,sans-serif",marginTop:2}}>{item[1]}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:12,fontFamily:"Inter,sans-serif",fontWeight:600}}>GLOBAL LEADERBOARD</div>
+            {leaderboard.length===0&&(
+              <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid "+T.border,borderRadius:16,padding:"32px",textAlign:"center"}}>
+                <div style={{fontSize:36,marginBottom:12}}>🏆</div>
+                <div style={{fontSize:13,color:T.muted,fontFamily:"Inter,sans-serif"}}>No one on the board yet. Make predictions to appear here.</div>
+              </div>
+            )}
+            {leaderboard.map(function(p,i){
+              const isMe=user&&p.id===user.id;
+              return(
+                <div key={p.id} style={{background:isMe?"linear-gradient(135deg,#0a2010,#071a0d)":"rgba(255,255,255,0.03)",border:"1px solid "+(isMe?"rgba(127,255,0,0.25)":T.border),borderRadius:14,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,transition:"all 0.2s"}}>
+                  <span style={{fontFamily:"Inter,sans-serif",fontWeight:900,fontSize:16,color:i===0?T.gold:i===1?"#C0C0C0":i===2?"#CD7F32":T.muted,minWidth:28}}>#{i+1}</span>
+                  <div style={{width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.06)",border:isMe?"2px solid "+T.lime:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{p.avatar||"⚽"}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:700,color:isMe?T.lime:T.white,fontFamily:"Inter,sans-serif"}}>@{p.username}{isMe?" (You)":""}</div>
+                    <div style={{fontSize:10,color:T.muted,fontFamily:"Inter,sans-serif",marginTop:2}}>{p.preds} predictions{p.favTeam?" · "+p.favTeam:""}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontFamily:"Inter,sans-serif",fontWeight:900,fontSize:18,color:isMe?T.lime:T.gold}}>{p.pts}</div>
+                    <div style={{fontSize:9,color:T.muted,fontFamily:"Inter,sans-serif"}}>pts</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>
+
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(4,13,8,0.97)",backdropFilter:"blur(20px)",borderTop:"1px solid "+T.border,display:"flex",padding:"6px 0 22px"}}>
+        {[{id:"home",icon:"🏠",label:"Home"},{id:"matches",icon:"⚽",label:"Matches"},{id:"news",icon:"📰",label:"News"},{id:"banter",icon:"💬",label:"Banter"},{id:"leaders",icon:"🏆",label:"Leaders"}].map(function(n){
+          return(
+            <button key={n.id} onClick={function(){setTab(n.id);}} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 2px",transition:"all 0.2s"}}>
+              <span style={{fontSize:20,filter:tab===n.id?"none":"grayscale(0.5)",transition:"all 0.2s"}}>{n.icon}</span>
+              <span style={{fontSize:9,fontFamily:"Inter,sans-serif",fontWeight:tab===n.id?700:400,color:tab===n.id?T.gold:T.muted,letterSpacing:0.5,transition:"all 0.2s"}}>{n.label}</span>
+              {tab===n.id&&<div style={{width:4,height:4,borderRadius:"50%",background:T.gold,marginTop:-2}}/>}
+            </button>
+          );
+        })}
+      </div>
+
+      {predictModal&&(
+        <PredictModal match={predictModal} onClose={function(){setPredictModal(null);}} onSubmit={function(id,pred){savePred(id,pred);showToast("🔒 Locked in! Points awarded after the result.",T.lime);}}/>
+      )}
+      {teamModal&&<TeamModal team={teamModal} onClose={function(){setTeamModal(null);}}/> }
+    </div>
+    );
+}
