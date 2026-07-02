@@ -160,6 +160,86 @@ const BONUS_MATCHES = {
   116: { label:"🇬🇭 GHANA BONUS CHALLENGE!", exactPts:200, winnerPts:100 },
 };
 
+// ---------- PREMIER LEAGUE — Matchweek 1 (2026/27) ----------
+const EPL_MW1 = [
+  {id:2001,home:"Arsenal",away:"Coventry City",date:"2026-08-21T19:00:00Z",matchday:1,venue:"Emirates Stadium"},
+  {id:2002,home:"Hull City",away:"Manchester United",date:"2026-08-22T11:30:00Z",matchday:1,venue:"MKM Stadium"},
+  {id:2003,home:"Everton",away:"Crystal Palace",date:"2026-08-22T14:00:00Z",matchday:1,venue:"Hill Dickinson Stadium"},
+  {id:2004,home:"Ipswich Town",away:"Sunderland",date:"2026-08-22T14:00:00Z",matchday:1,venue:"Portman Road"},
+  {id:2005,home:"Nottingham Forest",away:"Leeds United",date:"2026-08-22T14:00:00Z",matchday:1,venue:"City Ground"},
+  {id:2006,home:"Brentford",away:"Tottenham Hotspur",date:"2026-08-22T16:30:00Z",matchday:1,venue:"Gtech Community Stadium"},
+  {id:2007,home:"Brighton",away:"Aston Villa",date:"2026-08-23T13:00:00Z",matchday:1,venue:"Amex Stadium"},
+  {id:2008,home:"Manchester City",away:"Bournemouth",date:"2026-08-23T13:00:00Z",matchday:1,venue:"Etihad Stadium"},
+  {id:2009,home:"Newcastle United",away:"Liverpool",date:"2026-08-23T15:30:00Z",matchday:1,venue:"St James' Park"},
+  {id:2010,home:"Fulham",away:"Chelsea",date:"2026-08-24T19:00:00Z",matchday:1,venue:"Craven Cottage"},
+];
+
+// ---------- LA LIGA — Jornada 1 (2026/27) ----------
+// Kickoff times are placeholders — La Liga hasn't released hourly times yet.
+const LALIGA_MD1 = [
+  {id:3001,home:"Real Madrid",away:"Real Sociedad",date:"2026-08-16T19:00:00Z",matchday:1,venue:"Santiago Bernabéu"},
+  {id:3002,home:"Barcelona",away:"Athletic Club",date:"2026-08-15T19:00:00Z",matchday:1,venue:"Spotify Camp Nou"},
+  {id:3003,home:"Atlético Madrid",away:"Málaga",date:"2026-08-16T21:00:00Z",matchday:1,venue:"Riyadh Air Metropolitano"},
+  {id:3004,home:"Deportivo Alavés",away:"Getafe",date:"2026-08-15T17:00:00Z",matchday:1,venue:"Mendizorrotza"},
+  {id:3005,home:"Celta Vigo",away:"Osasuna",date:"2026-08-15T19:30:00Z",matchday:1,venue:"Balaídos"},
+  {id:3006,home:"Deportivo La Coruña",away:"Elche",date:"2026-08-16T17:00:00Z",matchday:1,venue:"Riazor"},
+  {id:3007,home:"Espanyol",away:"Levante",date:"2026-08-16T19:00:00Z",matchday:1,venue:"RCDE Stadium"},
+  {id:3008,home:"Racing Santander",away:"Villarreal",date:"2026-08-17T17:00:00Z",matchday:1,venue:"El Sardinero"},
+  {id:3009,home:"Sevilla",away:"Rayo Vallecano",date:"2026-08-17T19:00:00Z",matchday:1,venue:"Ramón Sánchez-Pizjuán"},
+  {id:3010,home:"Valencia",away:"Real Betis",date:"2026-08-17T21:00:00Z",matchday:1,venue:"Mestalla"},
+];
+
+// ---------- SERIE A — Giornata 1 (2026/27) ----------
+// Only Torino-Milan time is confirmed; others are placeholder weekend slots.
+const SERIEA_MD1 = [
+  {id:4001,home:"Atalanta",away:"Sassuolo",date:"2026-08-22T16:30:00Z",matchday:1,venue:"Gewiss Stadium"},
+  {id:4002,home:"Bologna",away:"Lazio",date:"2026-08-22T16:30:00Z",matchday:1,venue:"Stadio Renato Dall'Ara"},
+  {id:4003,home:"Frosinone",away:"Juventus",date:"2026-08-22T18:45:00Z",matchday:1,venue:"Stadio Benito Stirpe"},
+  {id:4004,home:"Genoa",away:"Napoli",date:"2026-08-23T16:30:00Z",matchday:1,venue:"Stadio Luigi Ferraris"},
+  {id:4005,home:"Inter",away:"Monza",date:"2026-08-23T18:45:00Z",matchday:1,venue:"San Siro"},
+  {id:4006,home:"Parma",away:"Cagliari",date:"2026-08-22T16:30:00Z",matchday:1,venue:"Stadio Ennio Tardini"},
+  {id:4007,home:"Roma",away:"Fiorentina",date:"2026-08-23T18:45:00Z",matchday:1,venue:"Stadio Olimpico"},
+  {id:4008,home:"Torino",away:"Milan",date:"2026-08-23T18:45:00Z",matchday:1,venue:"Stadio Olimpico Grande Torino"},
+  {id:4009,home:"Udinese",away:"Como",date:"2026-08-22T16:30:00Z",matchday:1,venue:"Bluenergy Stadium"},
+  {id:4010,home:"Venezia",away:"Lecce",date:"2026-08-22T16:30:00Z",matchday:1,venue:"Stadio Pier Luigi Penzo"},
+];
+
+// ---------- COMPETITIONS REGISTRY ----------
+const COMPETITIONS = {
+  wc2026: {
+    id:"wc2026", label:"World Cup 2026", shortLabel:"🌍 World Cup",
+    color:T.gold, fixtures: ALL_FIXTURES,
+    activeFrom:"2026-06-11", activeTo:"2026-07-19",
+  },
+  epl2026: {
+    id:"epl2026", label:"Premier League", shortLabel:"🏴 EPL",
+    color:"#3D195B", fixtures:EPL_MW1,
+    activeFrom:"2026-08-21", activeTo:"2027-05-30",
+  },
+  laliga2026: {
+    id:"laliga2026", label:"La Liga", shortLabel:"🇪🇸 La Liga",
+    color:"#EE8707", fixtures:LALIGA_MD1,
+    activeFrom:"2026-08-15", activeTo:"2027-05-30",
+  },
+  seriea2026: {
+    id:"seriea2026", label:"Serie A", shortLabel:"🇮🇹 Serie A",
+    color:"#008FD7", fixtures:SERIEA_MD1,
+    activeFrom:"2026-08-22", activeTo:"2027-05-30",
+  },
+};
+
+function getActiveCompetition(now){
+  const today = now || new Date();
+  const entries = Object.values(COMPETITIONS);
+  const live = entries.find(function(c){
+    return today >= new Date(c.activeFrom) && today <= new Date(c.activeTo);
+  });
+  if(live) return live;
+  const upcoming = entries.filter(function(c){ return new Date(c.activeFrom) > today; })
+    .sort(function(a,b){ return new Date(a.activeFrom) - new Date(b.activeFrom); });
+  return upcoming[0] || entries[0];
+}
+
 function getStatus(dateIso) {
   const now = Date.now();
   const start = new Date(dateIso).getTime();
@@ -227,7 +307,6 @@ function dedupeArticles(list){
   });
   return out;
 }
-
 async function fetchNews(){
   const key=import.meta.env.VITE_NEWSDATA_API_KEY||"";
   try{
@@ -397,7 +476,7 @@ function WhatsAppCard(){
   );
 }
 
-function HeroBanner({user,pts,myRank,predCount,liveCount}){
+function HeroBanner({user,pts,myRank,predCount,liveCount,compLabel,compStage}){
   const hour=new Date().getHours();
   const g=hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";
   return(
@@ -409,8 +488,8 @@ function HeroBanner({user,pts,myRank,predCount,liveCount}){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
           <div>
             <div style={{fontSize:11,color:T.muted,fontFamily:"Inter,sans-serif",marginBottom:4}}>{g}, {user.username} 👋</div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:2,background:"linear-gradient(135deg,"+T.gold+",#e8a800)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>WORLD CUP 2026</div>
-            <div style={{fontSize:10,color:T.muted,fontFamily:"Inter,sans-serif",marginTop:2,letterSpacing:1}}>ROUND OF 32 · IN PROGRESS</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:2,background:"linear-gradient(135deg,"+T.gold+",#e8a800)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>{compLabel}</div>
+            <div style={{fontSize:10,color:T.muted,fontFamily:"Inter,sans-serif",marginTop:2,letterSpacing:1}}>{compStage}</div>
           </div>
           <div style={{textAlign:"right"}}>
             {liveCount>0&&(
@@ -476,7 +555,7 @@ function MatchCard({match,pred,score,onPredict}){
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:live?T.gold:T.muted,fontFamily:"Inter,sans-serif",fontWeight:600,background:live?"rgba(245,197,24,0.12)":"rgba(255,255,255,0.05)",border:"1px solid "+(live?T.gold+"40":T.border),padding:"3px 8px",borderRadius:6,letterSpacing:0.5}}>
-            {match.stage==="R32"?"R32":"GRP "+match.group}
+            {match.stage==="R32"?"R32":match.group?"GRP "+match.group:"MD "+match.matchday}
           </span>
           <span style={{fontSize:10,color:T.muted,fontFamily:"Inter,sans-serif"}}>📍 {match.venue}</span>
         </div>
@@ -487,7 +566,6 @@ function MatchCard({match,pred,score,onPredict}){
           </span>
         </div>
       </div>
-
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
         <div style={{flex:1}}>
           <div style={{fontFamily:"Inter,sans-serif",fontWeight:800,fontSize:17,color:T.white,letterSpacing:-0.3}}>{match.home}</div>
@@ -549,6 +627,7 @@ function MatchCard({match,pred,score,onPredict}){
     </div>
   );
 }
+
 function PredictModal({match,onClose,onSubmit}){
   const [h,setH]=useState("");
   const [a,setA]=useState("");
@@ -789,7 +868,7 @@ function SetupProfile({firebaseUser,onComplete}){
       </div>
     </div>
   );
- }
+}
 export default function App(){
   const [screen,setScreen]=useState("loading");
   const [firebaseUser,setFirebaseUser]=useState(null);
@@ -797,6 +876,7 @@ export default function App(){
   const [tab,setTab]=useState("home");
   const [filter,setFilter]=useState("ALL");
   const [stageView,setStageView]=useState("R32");
+  const [activeCompetition,setActiveCompetition]=useState(function(){ return getActiveCompetition().id; });
   const [news,setNews]=useState([]);
   const [newsLoading,setNewsLoading]=useState(false);
   const [newsError,setNewsError]=useState(false);
@@ -967,16 +1047,20 @@ export default function App(){
 
   const predCount=Object.keys(preds).length;
   const myRank=user?leaderboard.findIndex(function(x){return x.id===user.id;})+1:0;
-  const liveCount=ALL_FIXTURES.filter(function(m){return getMatchStatus(m,scores)==="live";}).length;
+  const currentComp = COMPETITIONS[activeCompetition] || COMPETITIONS.wc2026;
+  const isWorldCup = activeCompetition === "wc2026";
+  const liveCount=currentComp.fixtures.filter(function(m){return getMatchStatus(m,scores)==="live";}).length;
 
-  const groupedMatches=stageView==="R32"
-    ? sortMatches(WC_ROUND_OF_32,scores)
-    : sortMatches(filter==="ALL"?WC_FIXTURES:WC_FIXTURES.filter(function(m){return m.group===filter;}),scores);
+  const groupedMatches = isWorldCup
+    ? (stageView==="R32"
+        ? sortMatches(WC_ROUND_OF_32,scores)
+        : sortMatches(filter==="ALL"?WC_FIXTURES:WC_FIXTURES.filter(function(m){return m.group===filter;}),scores))
+    : sortMatches(currentComp.fixtures,scores);
 
   const activeMatches=groupedMatches.filter(function(m){return getMatchStatus(m,scores)!=="finished";});
   const finishedMatches=groupedMatches.filter(function(m){return getMatchStatus(m,scores)==="finished";});
 
-  const liveAndUpcomingR32=WC_ROUND_OF_32.filter(function(m){
+  const liveAndUpcomingR32=currentComp.fixtures.filter(function(m){
     const s=getMatchStatus(m,scores);
     return s==="live"||s==="upcoming";
   }).slice(0,3);
@@ -1062,12 +1146,11 @@ export default function App(){
           </div>
         </div>
       </div>
-
       <div style={{padding:"16px 16px 100px"}}>
 
         {tab==="home"&&(
           <div style={{animation:"fadeIn 0.3s ease-out"}}>
-            <HeroBanner user={user} pts={pts} myRank={myRank} predCount={predCount} liveCount={liveCount}/>
+            <HeroBanner user={user} pts={pts} myRank={myRank} predCount={predCount} liveCount={liveCount} compLabel={currentComp.label.toUpperCase()} compStage={isWorldCup?"ROUND OF 32 · IN PROGRESS":"MATCHDAY 1 · IN PROGRESS"}/>
             <WhatsAppCard/>
             <div style={{marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -1121,6 +1204,17 @@ export default function App(){
 
         {tab==="matches"&&(
           <div style={{animation:"fadeIn 0.3s ease-out"}}>
+            <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,marginBottom:14}}>
+              {Object.values(COMPETITIONS).map(function(comp){
+                return(
+                  <button key={comp.id} onClick={function(){setActiveCompetition(comp.id);}}
+                    style={{flexShrink:0,padding:"9px 14px",borderRadius:20,border:"1px solid "+(activeCompetition===comp.id?comp.color:T.border),background:activeCompetition===comp.id?comp.color+"22":"rgba(255,255,255,0.04)",color:activeCompetition===comp.id?comp.color:T.muted,fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:12,cursor:"pointer",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+                    {comp.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+            {isWorldCup&&(
             <div style={{display:"flex",gap:8,marginBottom:16}}>
               <button onClick={function(){setStageView("R32");}}
                 style={{flex:1,padding:"11px 6px",borderRadius:12,border:"1px solid "+(stageView==="R32"?T.gold:T.border),background:stageView==="R32"?"rgba(245,197,24,0.12)":"rgba(255,255,255,0.04)",color:stageView==="R32"?T.gold:T.muted,fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>
@@ -1131,7 +1225,8 @@ export default function App(){
                 Group Stage
               </button>
             </div>
-            {stageView==="GROUP"&&(
+            )}
+            {isWorldCup&&stageView==="GROUP"&&(
               <div style={{marginBottom:16}}>
                 <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>
                   {GROUPS.map(function(g){
