@@ -216,15 +216,28 @@ function checkDailyBonus(uid,currentPts,onAward){
   }
 }
 
+function dedupeArticles(list){
+  const seen=new Set();
+  const out=[];
+  (list||[]).forEach(function(item){
+    const key=(item.title||"").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,80);
+    if(!key||seen.has(key)) return;
+    seen.add(key);
+    out.push(item);
+  });
+  return out;
+}
+
 async function fetchNews(){
   const key=import.meta.env.VITE_NEWSDATA_API_KEY||"";
   try{
     const r=await fetch("https://newsdata.io/api/1/news?apikey="+key+"&q=football+world+cup+2026&language=en&category=sports&size=10");
     if(!r.ok) throw new Error();
     const d=await r.json();
-    return (d.results||[]).map(function(a){
+    const mapped=(d.results||[]).map(function(a){
       return {title:a.title,source:a.source_id||"Football",time:timeAgo(a.pubDate),emoji:pickEmoji(a.title),url:a.link};
     });
+    return dedupeArticles(mapped);
   }catch(e){return null;}
 }
 async function fetchTeamNews(team){
@@ -233,7 +246,7 @@ async function fetchTeamNews(team){
     const r=await fetch("https://newsdata.io/api/1/news?apikey="+key+"&q="+encodeURIComponent(team+" football world cup")+"&language=en&category=sports&size=5");
     if(!r.ok) throw new Error();
     const d=await r.json();
-    return d.results||[];
+    return dedupeArticles(d.results||[]);
   }catch(e){return [];}
 }
 
@@ -351,15 +364,6 @@ function Toast({msg,color}){
   );
 }
 
-function NavTab({label,icon,active,onClick}){
-  return(
-    <button onClick={onClick} style={{flex:1,padding:"10px 2px 8px",border:"none",background:"transparent",color:active?T.gold:T.muted,fontSize:9,fontFamily:"Inter,sans-serif",fontWeight:active?700:400,letterSpacing:1,cursor:"pointer",borderBottom:active?"2px solid "+T.gold:"2px solid transparent",transition:"all 0.2s",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-      <span style={{fontSize:18}}>{icon}</span>
-      {label}
-    </button>
-  );
-}
-
 function StatPill({icon,value,label,color}){
   return(
     <div style={{flex:1,background:"rgba(255,255,255,0.04)",border:"1px solid "+T.border,borderRadius:14,padding:"12px 8px",textAlign:"center",backdropFilter:"blur(10px)"}}>
@@ -373,7 +377,7 @@ function StatPill({icon,value,label,color}){
 function WhatsAppCard(){
   return(
     <a href="https://whatsapp.com/channel/0029VbDZLtsHgZWXYbWmzr0C" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",display:"block",marginBottom:16}}>
-      <div style={{background:"linear-gradient(135deg,#0d2b1a,#081a10)",border:"1px solid #25D36630",borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:14,position:"relative",overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(135deg,#0d2b1a,#081a10)",border:"1px solid rgba(0,230,118,0.2)",borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:14,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,#25D366,transparent)"}}/>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(circle at 80% 50%,rgba(37,211,102,0.06),transparent 60%)"}}/>
         <div style={{width:44,height:44,borderRadius:12,background:"linear-gradient(135deg,#25D366,#1aad54)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(37,211,102,0.4)"}}>
@@ -545,7 +549,6 @@ function MatchCard({match,pred,score,onPredict}){
     </div>
   );
 }
-
 function PredictModal({match,onClose,onSubmit}){
   const [h,setH]=useState("");
   const [a,setA]=useState("");
@@ -786,7 +789,7 @@ function SetupProfile({firebaseUser,onComplete}){
       </div>
     </div>
   );
-}
+ }
 export default function App(){
   const [screen,setScreen]=useState("loading");
   const [firebaseUser,setFirebaseUser]=useState(null);
@@ -970,6 +973,9 @@ export default function App(){
     ? sortMatches(WC_ROUND_OF_32,scores)
     : sortMatches(filter==="ALL"?WC_FIXTURES:WC_FIXTURES.filter(function(m){return m.group===filter;}),scores);
 
+  const activeMatches=groupedMatches.filter(function(m){return getMatchStatus(m,scores)!=="finished";});
+  const finishedMatches=groupedMatches.filter(function(m){return getMatchStatus(m,scores)==="finished";});
+
   const liveAndUpcomingR32=WC_ROUND_OF_32.filter(function(m){
     const s=getMatchStatus(m,scores);
     return s==="live"||s==="upcoming";
@@ -1031,8 +1037,8 @@ export default function App(){
         </div>
       )}
 
-      <div style={{background:"rgba(4,13,8,0.95)",backdropFilter:"blur(20px)",padding:"14px 16px 0",borderBottom:"1px solid "+T.border,position:"sticky",top:0,zIndex:100}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{background:"rgba(4,13,8,0.95)",backdropFilter:"blur(20px)",padding:"14px 16px 14px",borderBottom:"1px solid "+T.border,position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <img src={LOGO} alt="KickQuest" style={{width:40,height:40,objectFit:"contain",borderRadius:10}}/>
             <div>
@@ -1054,13 +1060,6 @@ export default function App(){
               {user.avatar}
             </div>
           </div>
-        </div>
-        <div style={{display:"flex",gap:0}}>
-          <NavTab label="Home" icon="🏠" active={tab==="home"} onClick={function(){setTab("home");}}/>
-          <NavTab label="Matches" icon="⚽" active={tab==="matches"} onClick={function(){setTab("matches");}}/>
-          <NavTab label="News" icon="📰" active={tab==="news"} onClick={function(){setTab("news");}}/>
-          <NavTab label="Banter" icon="💬" active={tab==="banter"} onClick={function(){setTab("banter");}}/>
-          <NavTab label="Leaders" icon="🏆" active={tab==="leaders"} onClick={function(){setTab("leaders");}}/>
         </div>
       </div>
 
@@ -1149,9 +1148,34 @@ export default function App(){
             <div style={{fontSize:10,color:T.muted,marginBottom:12,fontFamily:"Inter,sans-serif",letterSpacing:0.5}}>
               {groupedMatches.length} matches · {predCount} predicted
             </div>
-            {groupedMatches.map(function(m){
-              return <MatchCard key={m.id} match={m} pred={preds[m.id]} score={scores[m.id]} onPredict={setPredictModal}/>;
-            })}
+
+            {activeMatches.length>0&&(
+              <div style={{marginBottom:finishedMatches.length>0?24:0}}>
+                <div style={{fontSize:11,color:T.lime,fontWeight:700,letterSpacing:1,marginBottom:10,fontFamily:"Inter,sans-serif"}}>⚡ UPCOMING &amp; LIVE</div>
+                {activeMatches.map(function(m){
+                  return <MatchCard key={m.id} match={m} pred={preds[m.id]} score={scores[m.id]} onPredict={setPredictModal}/>;
+                })}
+              </div>
+            )}
+
+            {finishedMatches.length>0&&(
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:10,margin:"4px 0 12px"}}>
+                  <div style={{flex:1,height:1,background:T.border}}/>
+                  <span style={{fontSize:10,color:T.muted,letterSpacing:1,fontFamily:"Inter,sans-serif",fontWeight:600}}>COMPLETED ({finishedMatches.length})</span>
+                  <div style={{flex:1,height:1,background:T.border}}/>
+                </div>
+                {finishedMatches.map(function(m){
+                  return <MatchCard key={m.id} match={m} pred={preds[m.id]} score={scores[m.id]} onPredict={setPredictModal}/>;
+                })}
+              </div>
+            )}
+
+            {activeMatches.length===0&&finishedMatches.length===0&&(
+              <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid "+T.border,borderRadius:16,padding:"24px",textAlign:"center"}}>
+                <div style={{fontSize:13,color:T.muted,fontFamily:"Inter,sans-serif"}}>No matches in this view.</div>
+              </div>
+            )}
           </div>
         )}
 
