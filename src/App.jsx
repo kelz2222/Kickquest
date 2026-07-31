@@ -93,10 +93,8 @@ function todayISO(offset){
 }
 
 async function fetchFixturesByDate(date){
-  const key=import.meta.env.VITE_APIFOOTBALL_KEY||"";
-  if(!key) return [];
   try{
-    const r=await fetch("https://v3.football.api-sports.io/fixtures?date="+date,{headers:{"x-apisports-key":key}});
+    const r=await fetch("/api/fixtures?date="+date);
     if(!r.ok) return [];
     const d=await r.json();
     return d.response||[];
