@@ -631,8 +631,8 @@ function AuthScreen({onSuccess}){
       <div style={{position:"absolute",bottom:"10%",left:"-5%",width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,rgba(201,162,39,0.04),transparent 70%)"}}/>
       <div style={{position:"relative",width:"100%",maxWidth:360}}>
         <div style={{textAlign:"center",marginBottom:36}}>
-          <img src={LOGO} style={{width:90,height:90,objectFit:"contain",marginBottom:20}} alt="KickQuest"/>
-          <KQTitle size={42}/>
+  <img src={LOGO} style={{width:80,height:80,objectFit:"contain",marginBottom:16,display:"block",margin:"0 auto 16px"}} alt="KickQuest"/>
+  <KQTitle size={42}/>
           <div style={{fontSize:11,color:C.muted,letterSpacing:2,fontFamily:"Barlow,sans-serif",fontWeight:500,marginTop:6}}>SCORES · STATS · PREDICT · WIN</div>
         </div>
         <div style={{background:"#111111",border:"1px solid "+C.border,borderRadius:16,padding:"24px 20px"}}>
