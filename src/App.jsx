@@ -945,7 +945,7 @@ export default function App(){
 
             {/* Profile card */}
             <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20,padding:"16px",background:C.goldDim,border:"1px solid "+C.gold+"30",borderRadius:14}}>
-              <div style={{width:56,height:56,borderRadius:"50%",border:"2px solid "+C.gold,background:"rgba(201,162,39,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}}>{user.avatar}</div>
+              <div style={{width:56,height:56,borderRadius:"50%",border:"2px solid "+C.gold,background:"rgba(201,162,39,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{user.avatar}</div>
               <div>
                 <div style={{fontFamily:"Bebas Neue,sans-serif",fontSize:20,color:C.white,letterSpacing:1}}>@{user.username}</div>
                 <div style={{fontSize:11,color:C.muted,marginTop:2,fontFamily:"Barlow,sans-serif"}}>{user.email}</div>
