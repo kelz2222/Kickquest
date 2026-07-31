@@ -1086,7 +1086,7 @@ export default function App(){
               })}
             </div>
 
-            <div onClick={function(){setShowCoinStore(true);}} style={{background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:14,padding:"14px",marginBottom:16,cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+             <div onClick={function(){setShowCoinStore(true);}} style={{background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:14,padding:"14px",marginBottom:16,cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:44,height:44,borderRadius:12,background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>🤖</div>
               <div style={{flex:1}}>
                 <div style={{fontFamily:"Bebas Neue,sans-serif",fontSize:16,color:C.purple,letterSpacing:1,marginBottom:2}}>KQ AI MATCH ANALYSIS</div>
