@@ -804,6 +804,7 @@ export default function App(){
   },[]);
 
   async function loadSession(fbUser){
+  try{
     let userData=await loadUserDoc(fbUser.uid);
     if(!userData){
       const authProfile=readProfileFromAuth(fbUser);
@@ -818,7 +819,11 @@ export default function App(){
     const loadedPreds=await loadPredsFS(fbUser.uid);
     setPreds(loadedPreds);
     setScreen("app");
+  }catch(err){
+    alert("Login error: "+err.message);
+    setScreen("login");
   }
+}
 
   function handleAuthSuccess(fbUser,isNew){
     setFirebaseUser(fbUser);
