@@ -97,7 +97,20 @@ async function fetchFixturesByDate(date){
     const r=await fetch("/api/fixtures?date="+date);
     if(!r.ok) return [];
     const d=await r.json();
-    return d.response||[];
+    const matches=d.matches||[];
+    return matches.map(function(m){
+      let short="NS";
+      if(m.status==="IN_PLAY") short="1H";
+      else if(m.status==="PAUSED") short="HT";
+      else if(m.status==="FINISHED") short="FT";
+      else if(m.status==="POSTPONED"||m.status==="SUSPENDED"||m.status==="CANCELLED") short="PST";
+      return {
+        fixture:{id:m.id,date:m.utcDate,status:{short:short,elapsed:m.minute||null}},
+        league:{id:m.competition.id,name:m.competition.name,country:m.competition.area?m.competition.area.name:"",logo:m.competition.emblem,flag:null},
+        teams:{home:{name:m.homeTeam.name,logo:m.homeTeam.crest},away:{name:m.awayTeam.name,logo:m.awayTeam.crest}},
+        goals:{home:m.score&&m.score.fullTime?m.score.fullTime.home:null,away:m.score&&m.score.fullTime?m.score.fullTime.away:null},
+      };
+    });
   }catch(e){return [];}
 }
 
