@@ -62,7 +62,7 @@ const CSS = `
   @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   @keyframes toastIn{from{opacity:0;transform:translateY(12px) translateX(-50%)}to{opacity:1;transform:translateY(0) translateX(-50%)}}
   @keyframes liveGlow{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
   @keyframes aiTyping{0%,100%{opacity:0.3}50%{opacity:1}}
