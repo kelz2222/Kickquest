@@ -582,9 +582,10 @@ function PredictModal({fixture,onClose,onSubmit}){
 
 function LoadingScreen(){
   return(
-    <div style={{minHeight:"100vh",background:"#0a0a0a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+    <div style={{minHeight:"100vh",background:"#0a0a0a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24}}>
       <style>{CSS}</style>
-      <img src={LOGO} style={{width:100,height:100,objectFit:"contain",animation:"bounce 1.2s ease-in-out infinite"}} alt="KickQuest"/>
+      <img src={LOGO} style={{width:90,height:90,objectFit:"contain"}} alt="KickQuest"/>
+      <div style={{width:32,height:32,border:"3px solid #242424",borderTop:"3px solid #c9a227",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
     </div>
   );
 }
