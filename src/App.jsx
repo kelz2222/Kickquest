@@ -104,13 +104,8 @@ async function fetchFixturesByDate(date){
 }
 
 async function fetchStandingsFree(leagueCode){
-  const FD_KEY=import.meta.env.VITE_FOOTBALLDATA_KEY||"";
-  const codeMap={EPL:"PL",UCL:"CL",LIGA:"PD",BUN:"BL1",SA:"SA"};
-  const code=codeMap[leagueCode];
-  if(!code) return [];
   try{
-    const headers=FD_KEY?{"X-Auth-Token":FD_KEY}:{};
-    const r=await fetch("https://api.football-data.org/v4/competitions/"+code+"/standings",{headers});
+    const r=await fetch("/api/standings?league="+leagueCode);
     if(!r.ok) return [];
     const d=await r.json();
     const table=d.standings&&d.standings[0]&&d.standings[0].table;
